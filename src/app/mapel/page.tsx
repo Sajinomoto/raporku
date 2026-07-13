@@ -1,0 +1,260 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { supabase } from "@/lib/supabase";
+import { 
+  BookOpen, 
+  Plus, 
+  Edit3, 
+  Trash2, 
+  X, 
+  GraduationCap, 
+  Tag 
+} from "lucide-react";
+
+interface MataPelajaran {
+  id: string;
+  nama_mapel: string;
+  kategori: string;
+  created_at: string;
+}
+
+export default function MapelPage() {
+  const [subjects, setSubjects] = useState<MataPelajaran[]>([]);
+  const [loading, setLoading] = useState(true);
+  
+  // Form states
+  const [showForm, setShowForm] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [formId, setFormId] = useState("");
+  const [formNama, setFormNama] = useState("");
+  const [formKategori, setFormKategori] = useState("Wajib");
+
+  useEffect(() => {
+    fetchSubjects();
+  }, []);
+
+  const fetchSubjects = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("mata_pelajaran")
+        .select("*")
+        .order("nama_mapel", { ascending: true });
+
+      if (error) throw error;
+      setSubjects(data || []);
+    } catch (err) {
+      console.error("Error fetching subjects:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveSubject = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formNama.trim()) return;
+
+    try {
+      if (isEditing) {
+        const { error } = await supabase
+          .from("mata_pelajaran")
+          .update({
+            nama_mapel: formNama,
+            kategori: formKategori,
+          })
+          .eq("id", formId);
+
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("mata_pelajaran")
+          .insert({
+            nama_mapel: formNama,
+            kategori: formKategori,
+          });
+
+        if (error) throw error;
+      }
+
+      // Reset
+      setShowForm(false);
+      setIsEditing(false);
+      setFormNama("");
+      setFormKategori("Wajib");
+      fetchSubjects();
+    } catch (err) {
+      console.error("Error saving subject:", err);
+    }
+  };
+
+  const handleEditSubject = (subject: MataPelajaran) => {
+    setFormId(subject.id);
+    setFormNama(subject.nama_mapel);
+    setFormKategori(subject.kategori);
+    setIsEditing(true);
+    setShowForm(true);
+  };
+
+  const handleDeleteSubject = async (id: string) => {
+    if (!confirm("Apakah Anda yakin ingin menghapus mata pelajaran ini? Semua data nilai yang terhubung dengan mapel ini juga akan terhapus secara otomatis.")) return;
+
+    try {
+      const { error } = await supabase
+        .from("mata_pelajaran")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+      fetchSubjects();
+    } catch (err) {
+      console.error("Error deleting subject:", err);
+    }
+  };
+
+  return (
+    <div className="p-8 flex-1 flex flex-col space-y-6 bg-[#0B0F19]">
+      {/* Header */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-2xl font-black text-white tracking-tight">Kurikulum Mata Pelajaran</h2>
+          <p className="text-xs text-zinc-500 mt-1">Kelola daftar mata pelajaran utama dan peminatan di sekolah.</p>
+        </div>
+        <button
+          onClick={() => {
+            setIsEditing(false);
+            setFormNama("");
+            setFormKategori("Wajib");
+            setShowForm(true);
+          }}
+          className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-semibold transition-all shadow-lg shadow-indigo-600/10 cursor-pointer"
+        >
+          <Plus size={16} /> Tambah Mapel
+        </button>
+      </div>
+
+      {/* Main Content Area */}
+      {loading ? (
+        <div className="flex items-center justify-center py-20 bg-[#0F172A] border border-[#1E293B] rounded-xl text-zinc-500">
+          Memuat data mata pelajaran...
+        </div>
+      ) : subjects.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20 bg-[#0F172A] border border-[#1E293B] rounded-xl text-center p-6">
+          <BookOpen className="text-zinc-600 mb-4" size={48} />
+          <h3 className="font-bold text-white text-base">Belum ada mata pelajaran</h3>
+          <p className="text-xs text-zinc-500 mt-1 max-w-xs">Silakan tambahkan mata pelajaran baru untuk kurikulum akademik.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {subjects.map((subject) => (
+            <div
+              key={subject.id}
+              className="bg-[#0F172A] border border-[#1E293B] rounded-xl p-5 hover:border-zinc-700 transition-all flex items-center justify-between group"
+            >
+              <div className="space-y-2">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2.5 bg-indigo-500/10 text-indigo-400 rounded-lg">
+                    <BookOpen size={18} />
+                  </div>
+                  <h3 className="font-bold text-white text-sm tracking-tight">{subject.nama_mapel}</h3>
+                </div>
+                
+                <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                  subject.kategori === "Wajib" 
+                    ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" 
+                    : subject.kategori === "Peminatan"
+                    ? "bg-purple-500/10 text-purple-400 border border-purple-500/20"
+                    : "bg-amber-500/10 text-amber-400 border border-amber-500/20"
+                }`}>
+                  <Tag size={10} />
+                  {subject.kategori}
+                </span>
+              </div>
+
+              {/* Actions */}
+              <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button
+                  onClick={() => handleEditSubject(subject)}
+                  className="p-2 hover:bg-[#1E293B] text-zinc-400 hover:text-white rounded-lg transition-colors cursor-pointer"
+                  title="Edit Mapel"
+                >
+                  <Edit3 size={14} />
+                </button>
+                <button
+                  onClick={() => handleDeleteSubject(subject.id)}
+                  className="p-2 hover:bg-red-500/10 text-zinc-400 hover:text-red-400 rounded-lg transition-colors cursor-pointer"
+                  title="Hapus Mapel"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Form Modal */}
+      {showForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+          <div className="bg-[#0F172A] border border-[#1E293B] rounded-xl w-full max-w-md shadow-2xl overflow-hidden">
+            <div className="flex justify-between items-center p-5 border-b border-[#1E293B]">
+              <h3 className="font-bold text-white text-base">
+                {isEditing ? "Edit Mata Pelajaran" : "Tambah Mapel Baru"}
+              </h3>
+              <button 
+                onClick={() => setShowForm(false)}
+                className="p-1 hover:bg-[#1E293B] text-zinc-500 hover:text-white rounded-lg cursor-pointer"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            
+            <form onSubmit={handleSaveSubject} className="p-5 space-y-4">
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-zinc-400">Nama Mata Pelajaran</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Misal: Matematika Wajib, Fisika, Biologi"
+                  value={formNama}
+                  onChange={(e) => setFormNama(e.target.value)}
+                  className="w-full bg-[#0B0F19] border border-[#1E293B] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-zinc-400">Kategori</label>
+                <select
+                  value={formKategori}
+                  onChange={(e) => setFormKategori(e.target.value)}
+                  className="w-full bg-[#0B0F19] border border-[#1E293B] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+                >
+                  <option value="Wajib">Wajib</option>
+                  <option value="Peminatan">Peminatan</option>
+                  <option value="Muatan Lokal">Muatan Lokal</option>
+                </select>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowForm(false)}
+                  className="px-4 py-2 bg-transparent hover:bg-[#1E293B] text-zinc-400 hover:text-white rounded-lg text-xs font-semibold transition-all cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold transition-all shadow-md shadow-indigo-600/10 cursor-pointer"
+                >
+                  Simpan
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+    </div>
+  );
+}
