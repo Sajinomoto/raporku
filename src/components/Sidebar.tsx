@@ -8,11 +8,15 @@ import {
   Users, 
   BookOpen, 
   ClipboardCheck, 
-  TrendingUp 
+  TrendingUp,
+  LogOut,
+  UserCheck
 } from "lucide-react";
+import { useAuth } from "@/components/AuthProvider";
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const { user, signOut } = useAuth();
 
   const menuItems = [
     {
@@ -86,10 +90,43 @@ export default function Sidebar() {
         })}
       </nav>
 
+      {/* User Info & Logout Button */}
+      {user && (
+        <div className="p-4 border-t border-[#1E293B] bg-[#0A0F1D]/50 space-y-3">
+          <div className="flex items-center gap-3">
+            {user.user_metadata?.avatar_url ? (
+              <img
+                src={user.user_metadata.avatar_url}
+                alt={user.user_metadata.full_name || "User Avatar"}
+                className="w-8 h-8 rounded-full border border-indigo-500/20 object-cover"
+              />
+            ) : (
+              <div className="w-8 h-8 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 flex items-center justify-center">
+                <UserCheck size={14} />
+              </div>
+            )}
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-bold text-white truncate leading-none">
+                {user.user_metadata?.full_name || user.email?.split("@")[0]}
+              </p>
+              <p className="text-[10px] text-zinc-500 truncate mt-1">
+                {user.email}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={signOut}
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+          >
+            <LogOut size={12} />
+            <span>Keluar Sesi</span>
+          </button>
+        </div>
+      )}
+
       {/* Footer Info */}
-      <div className="p-4 border-t border-[#1E293B] bg-[#0A0F1D]/50 text-center">
-        <p className="text-[11px] text-zinc-500">Raporku Capstone Project</p>
-        <p className="text-[9px] text-zinc-600 mt-0.5">© 2026 Eduscore System</p>
+      <div className="py-3 text-center border-t border-[#1E293B]/60 bg-[#090D18]/80 text-[10px] text-zinc-600">
+        Raporku System • © 2026
       </div>
     </aside>
   );
