@@ -15,8 +15,11 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Raporku Eduscore - Dashboard Rapor",
+  title: "Raporku",
   description: "Sistem e-rapor dashboard interaktif untuk memantau nilai dan perkembangan siswa.",
+  icons: {
+    icon: "/Logo.svg",
+  },
 };
 
 export default function RootLayout({
@@ -27,9 +30,9 @@ export default function RootLayout({
   return (
     <html
       lang="id"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased dark`}
+      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex bg-[#0B0F19] text-zinc-100 font-sans">
+      <body className="min-h-full flex bg-cool-gray text-zinc-900 font-sans">
         <AuthProvider>
           <MainLayout>{children}</MainLayout>
         </AuthProvider>

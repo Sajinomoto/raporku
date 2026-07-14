@@ -37,12 +37,12 @@ export default function AuthCallbackPage() {
   }, [router]);
 
   return (
-    <div className="min-h-screen w-full bg-[#0B0F19] flex flex-col items-center justify-center space-y-4">
+    <div className="min-h-screen w-full bg-cool-gray flex flex-col items-center justify-center space-y-4 text-zinc-800">
       <div className="relative">
-        <div className="absolute inset-0 bg-indigo-500/10 blur-xl rounded-full"></div>
-        <Loader2 className="animate-spin text-indigo-500 relative" size={36} />
+        <div className="absolute inset-0 bg-strong-blue/10 blur-xl rounded-full"></div>
+        <Loader2 className="animate-spin text-strong-blue relative" size={36} />
       </div>
-      <p className="text-xs text-zinc-400 font-medium">Sedang memverifikasi login Anda...</p>
+      <p className="text-xs text-zinc-600 font-bold">Sedang memverifikasi login Anda...</p>
     </div>
   );
 }

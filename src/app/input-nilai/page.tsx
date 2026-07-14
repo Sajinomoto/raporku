@@ -300,34 +300,34 @@ export default function InputNilaiPage() {
   const totalSesi = hadir + sakit + izin + alpha;
 
   return (
-    <div className="p-8 flex-1 flex flex-col space-y-6 bg-[#0B0F19]">
+    <div className="p-8 flex-1 flex flex-col space-y-6 bg-cool-gray text-zinc-900">
       {/* Header */}
       <div>
-        <h2 className="text-2xl font-black text-white tracking-tight">Input Nilai & Kehadiran</h2>
-        <p className="text-xs text-zinc-500 mt-1">Masukkan nilai per mata pelajaran dan rekap absen kehadiran siswa secara cepat.</p>
+        <h2 className="text-2xl font-black text-strong-blue tracking-tight">Input Nilai & Kehadiran</h2>
+        <p className="text-xs text-zinc-600 mt-1 font-medium">Masukkan nilai per mata pelajaran dan rekap absen kehadiran siswa secara cepat.</p>
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center py-20 bg-[#0F172A] border border-[#1E293B] rounded-xl text-zinc-500">
+        <div className="flex items-center justify-center py-20 bg-white border border-zinc-200 rounded-xl text-zinc-500 shadow-xs">
           Memuat data referensi akademik...
         </div>
       ) : (
         <form onSubmit={handleSave} className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
           
           {/* Left Column: Selector Panel */}
-          <div className="lg:col-span-1 bg-[#0F172A] border border-[#1E293B] rounded-xl p-5 space-y-5">
-            <h3 className="font-bold text-white text-sm border-b border-[#1E293B] pb-2">1. Pilih Target Siswa & Mapel</h3>
+          <div className="lg:col-span-1 bg-white border border-zinc-200 rounded-xl p-5 space-y-5 shadow-xs">
+            <h3 className="font-bold text-strong-blue text-sm border-b border-zinc-200 pb-2">1. Pilih Target Siswa & Mapel</h3>
             
             {/* Student selection */}
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-zinc-400 flex items-center gap-1.5">
-                <User size={12} className="text-indigo-400" /> Nama Siswa
+              <label className="text-xs font-bold text-zinc-500 flex items-center gap-1.5">
+                <User size={12} className="text-strong-blue" /> Nama Siswa
               </label>
               <select
                 required
                 value={selectedStudentId}
                 onChange={(e) => setSelectedStudentId(e.target.value)}
-                className="w-full bg-[#0B0F19] border border-[#1E293B] rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500"
+                className="w-full bg-white border border-zinc-300 rounded-lg px-3 py-2.5 text-sm text-zinc-900 focus:outline-none focus:border-strong-blue focus:ring-1 focus:ring-strong-blue"
               >
                 <option value="">-- Pilih Siswa --</option>
                 {students.map((student) => {
@@ -343,13 +343,13 @@ export default function InputNilaiPage() {
 
             {/* Subject selection */}
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-zinc-400 flex items-center gap-1.5">
-                <BookOpen size={12} className="text-indigo-400" /> Mata Pelajaran
+              <label className="text-xs font-bold text-zinc-500 flex items-center gap-1.5">
+                <BookOpen size={12} className="text-strong-blue" /> Mata Pelajaran
               </label>
               <select
                 value={selectedSubjectId}
                 onChange={(e) => setSelectedSubjectId(e.target.value)}
-                className="w-full bg-[#0B0F19] border border-[#1E293B] rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500"
+                className="w-full bg-white border border-zinc-300 rounded-lg px-3 py-2.5 text-sm text-zinc-900 focus:outline-none focus:border-strong-blue focus:ring-1 focus:ring-strong-blue"
               >
                 <option value="">-- Pilih Mata Pelajaran (Opsional) --</option>
                 {subjects.map((subj) => (
@@ -358,7 +358,7 @@ export default function InputNilaiPage() {
                   </option>
                 ))}
               </select>
-              <span className="text-[10px] text-zinc-500 block">Isi jika ingin menginput/mengubah nilai mata pelajaran tertentu.</span>
+              <span className="text-[10px] text-zinc-400 block font-medium">Isi jika ingin menginput/mengubah nilai mata pelajaran tertentu.</span>
             </div>
           </div>
 
@@ -369,19 +369,19 @@ export default function InputNilaiPage() {
             {message && (
               <div className={`p-4 rounded-xl border flex items-start gap-3 transition-all duration-300 ${
                 message.type === "success" 
-                  ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" 
-                  : "bg-red-500/10 border-red-500/20 text-red-400"
+                  ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-600" 
+                  : "bg-red-500/10 border-red-500/20 text-red-600"
               }`}>
                 {message.type === "success" ? <CheckCircle2 size={18} className="shrink-0" /> : <AlertCircle size={18} className="shrink-0" />}
-                <p className="text-xs font-medium">{message.text}</p>
+                <p className="text-xs font-bold">{message.text}</p>
               </div>
             )}
 
             {!selectedStudentId ? (
-              <div className="py-20 border border-dashed border-[#1E293B] rounded-xl flex flex-col items-center justify-center text-center p-6 bg-[#0F172A]/50">
-                <ClipboardCheck className="text-zinc-600 mb-4" size={48} />
-                <h3 className="font-bold text-white text-base">Form Input Terkunci</h3>
-                <p className="text-xs text-zinc-500 mt-1 max-w-xs">Silakan pilih target siswa terlebih dahulu pada panel kiri untuk membuka form input data.</p>
+              <div className="py-20 border border-dashed border-zinc-300 rounded-xl flex flex-col items-center justify-center text-center p-6 bg-white shadow-xs">
+                <ClipboardCheck className="text-zinc-400 mb-4" size={48} />
+                <h3 className="font-bold text-zinc-800 text-base">Form Input Terkunci</h3>
+                <p className="text-xs text-zinc-500 mt-1 max-w-xs font-medium">Silakan pilih target siswa terlebih dahulu pada panel kiri untuk membuka form input data.</p>
               </div>
             ) : (
               <div className="space-y-6">
@@ -390,16 +390,16 @@ export default function InputNilaiPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   
                   {/* Grade Score Card */}
-                  <div className="bg-[#0F172A] border border-[#1E293B] rounded-xl p-5 space-y-4">
-                    <h3 className="font-bold text-white text-sm border-b border-[#1E293B] pb-2 flex items-center gap-2">
-                      <FileSpreadsheet size={16} className="text-indigo-400" /> 2. Nilai Akademik
+                  <div className="bg-white border border-zinc-200 rounded-xl p-5 space-y-4 shadow-xs">
+                    <h3 className="font-bold text-strong-blue text-sm border-b border-zinc-200 pb-2 flex items-center gap-2">
+                      <FileSpreadsheet size={16} className="text-strong-blue" /> 2. Nilai Akademik
                     </h3>
 
                     {!selectedSubjectId ? (
-                      <p className="text-xs text-zinc-500 italic py-6 text-center">Silakan pilih mata pelajaran di panel kiri untuk mengisi skor nilai.</p>
+                      <p className="text-xs text-zinc-400 italic py-6 text-center font-medium">Silakan pilih mata pelajaran di panel kiri untuk mengisi skor nilai.</p>
                     ) : (
                       <div className="space-y-2">
-                        <label className="text-xs font-semibold text-zinc-400 block">
+                        <label className="text-xs font-bold text-zinc-500 block">
                           Skor Nilai ({subjects.find(s => s.id === selectedSubjectId)?.nama_mapel})
                         </label>
                         <input
@@ -410,98 +410,98 @@ export default function InputNilaiPage() {
                           placeholder="Rentang 0 - 100"
                           value={skor}
                           onChange={(e) => setSkor(e.target.value === "" ? "" : Number(e.target.value))}
-                          className="w-full bg-[#0B0F19] border border-[#1E293B] rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500"
+                          className="w-full bg-white border border-zinc-300 rounded-lg px-3 py-2.5 text-sm text-zinc-900 focus:outline-none focus:border-strong-blue focus:ring-1 focus:ring-strong-blue"
                         />
                       </div>
                     )}
                   </div>
 
                   {/* Attendance Card */}
-                  <div className="bg-[#0F172A] border border-[#1E293B] rounded-xl p-5 space-y-4">
-                    <h3 className="font-bold text-white text-sm border-b border-[#1E293B] pb-2 flex items-center gap-2">
-                      <Clock size={16} className="text-indigo-400" /> 3. Rekap Kehadiran
+                  <div className="bg-white border border-zinc-200 rounded-xl p-5 space-y-4 shadow-xs">
+                    <h3 className="font-bold text-strong-blue text-sm border-b border-zinc-200 pb-2 flex items-center gap-2">
+                      <Clock size={16} className="text-strong-blue" /> 3. Rekap Kehadiran
                     </h3>
 
                     <div className="grid grid-cols-2 gap-4">
                       <div className="space-y-1">
-                        <label className="text-[11px] font-semibold text-zinc-400">Hadir</label>
+                        <label className="text-[11px] font-bold text-zinc-500">Hadir</label>
                         <input
                           type="number"
                           min={0}
                           value={hadir}
                           onChange={(e) => setHadir(Math.max(0, Number(e.target.value)))}
-                          className="w-full bg-[#0B0F19] border border-[#1E293B] rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500"
+                          className="w-full bg-white border border-zinc-300 rounded-lg px-3 py-1.5 text-xs text-zinc-900 focus:outline-none focus:border-strong-blue focus:ring-1 focus:ring-strong-blue"
                         />
                       </div>
 
                       <div className="space-y-1">
-                        <label className="text-[11px] font-semibold text-zinc-400">Sakit</label>
+                        <label className="text-[11px] font-bold text-zinc-500">Sakit</label>
                         <input
                           type="number"
                           min={0}
                           value={sakit}
                           onChange={(e) => setSakit(Math.max(0, Number(e.target.value)))}
-                          className="w-full bg-[#0B0F19] border border-[#1E293B] rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500"
+                          className="w-full bg-white border border-zinc-300 rounded-lg px-3 py-1.5 text-xs text-zinc-900 focus:outline-none focus:border-strong-blue focus:ring-1 focus:ring-strong-blue"
                         />
                       </div>
 
                       <div className="space-y-1">
-                        <label className="text-[11px] font-semibold text-zinc-400">Izin</label>
+                        <label className="text-[11px] font-bold text-zinc-500">Izin</label>
                         <input
                           type="number"
                           min={0}
                           value={izin}
                           onChange={(e) => setIzen(Math.max(0, Number(e.target.value)))}
-                          className="w-full bg-[#0B0F19] border border-[#1E293B] rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500"
+                          className="w-full bg-white border border-zinc-300 rounded-lg px-3 py-1.5 text-xs text-zinc-900 focus:outline-none focus:border-strong-blue focus:ring-1 focus:ring-strong-blue"
                         />
                       </div>
 
                       <div className="space-y-1">
-                        <label className="text-[11px] font-semibold text-zinc-400">Alpha</label>
+                        <label className="text-[11px] font-bold text-zinc-500">Alpha</label>
                         <input
                           type="number"
                           min={0}
                           value={alpha}
                           onChange={(e) => setAlpha(Math.max(0, Number(e.target.value)))}
-                          className="w-full bg-[#0B0F19] border border-[#1E293B] rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-indigo-500"
+                          className="w-full bg-white border border-zinc-300 rounded-lg px-3 py-1.5 text-xs text-zinc-900 focus:outline-none focus:border-strong-blue focus:ring-1 focus:ring-strong-blue"
                         />
                       </div>
                     </div>
 
-                    <div className="pt-2 flex justify-between items-center text-xs border-t border-[#1E293B]/60">
-                      <span className="text-zinc-500 font-semibold uppercase tracking-wider">Total Sesi Kehadiran</span>
-                      <span className="font-extrabold text-white">{totalSesi} Sesi</span>
+                    <div className="pt-2 flex justify-between items-center text-xs border-t border-zinc-200">
+                      <span className="text-zinc-500 font-bold uppercase tracking-wider">Total Sesi Kehadiran</span>
+                      <span className="font-extrabold text-strong-blue">{totalSesi} Sesi</span>
                     </div>
                   </div>
 
                 </div>
 
                 {/* Teacher Notes Card */}
-                <div className="bg-[#0F172A] border border-[#1E293B] rounded-xl p-5 space-y-4">
-                  <h3 className="font-bold text-white text-sm border-b border-[#1E293B] pb-2 flex items-center gap-2">
-                    <MessageSquare size={16} className="text-indigo-400" /> 4. Catatan Wali Kelas
+                <div className="bg-white border border-zinc-200 rounded-xl p-5 space-y-4 shadow-xs">
+                  <h3 className="font-bold text-strong-blue text-sm border-b border-zinc-200 pb-2 flex items-center gap-2">
+                    <MessageSquare size={16} className="text-strong-blue" /> 4. Catatan Wali Kelas
                   </h3>
 
                   <div className="space-y-3">
                     <div className="space-y-1">
-                      <label className="text-xs font-semibold text-zinc-400">Catatan/Evaluasi Siswa</label>
+                      <label className="text-xs font-bold text-zinc-500">Catatan/Evaluasi Siswa</label>
                       <textarea
                         rows={3}
                         placeholder="Misal: Sangat cerdas. Tolong pertahankan prestasinya."
                         value={catatan}
                         onChange={(e) => setCatatan(e.target.value)}
-                        className="w-full bg-[#0B0F19] border border-[#1E293B] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+                        className="w-full bg-white border border-zinc-300 rounded-lg px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:border-strong-blue focus:ring-1 focus:ring-strong-blue"
                       />
                     </div>
 
                     <div className="space-y-1">
-                      <label className="text-xs font-semibold text-zinc-400">Nama Guru / Wali Kelas</label>
+                      <label className="text-xs font-bold text-zinc-500">Nama Guru / Wali Kelas</label>
                       <input
                         type="text"
                         placeholder="Misal: Prof. Dr. Dora The Explorer"
                         value={namaGuru}
                         onChange={(e) => setNamaGuru(e.target.value)}
-                        className="w-full bg-[#0B0F19] border border-[#1E293B] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-indigo-500"
+                        className="w-full bg-white border border-zinc-300 rounded-lg px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:border-strong-blue focus:ring-1 focus:ring-strong-blue"
                       />
                     </div>
                   </div>
@@ -512,7 +512,7 @@ export default function InputNilaiPage() {
                   <button
                     type="submit"
                     disabled={saving}
-                    className="flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-zinc-700 text-white rounded-lg text-sm font-bold transition-all shadow-lg shadow-indigo-600/10 cursor-pointer"
+                    className="flex items-center gap-2 px-6 py-3 bg-strong-blue hover:bg-[#001D6E] disabled:bg-zinc-300 text-white rounded-lg text-sm font-bold transition-all shadow-lg shadow-strong-blue/10 cursor-pointer"
                   >
                     <Save size={16} /> {saving ? "Menyimpan Data..." : "Simpan Seluruh Data"}
                   </button>
