@@ -33,6 +33,7 @@ interface Kelas {
   nama_kelas: string;
   tahun_ajaran: string;
   deskripsi: string | null;
+  jenjang: string;
   created_at: string;
 }
 
@@ -71,6 +72,7 @@ export default function ClassDetailPage({ params }: { params: Promise<{ id: stri
   const [formNama, setFormNama] = useState("");
   const [formTahun, setFormTahun] = useState("");
   const [formDeskripsi, setFormDeskripsi] = useState("");
+  const [formJenjang, setFormJenjang] = useState("SD");
 
   // Grade/Attendance Input Modal states
   const [showInputModal, setShowInputModal] = useState(false);
@@ -441,6 +443,7 @@ export default function ClassDetailPage({ params }: { params: Promise<{ id: stri
       setFormNama(data.nama_kelas);
       setFormTahun(data.tahun_ajaran);
       setFormDeskripsi(data.deskripsi || "");
+      setFormJenjang(data.jenjang || "SD");
     } catch (err) {
       console.error("Error fetching class data:", err);
       router.push("/kelas");
@@ -540,6 +543,7 @@ export default function ClassDetailPage({ params }: { params: Promise<{ id: stri
           nama_kelas: formNama,
           tahun_ajaran: formTahun,
           deskripsi: formDeskripsi || null,
+          jenjang: formJenjang,
         })
         .eq("id", classId);
 
@@ -938,6 +942,20 @@ export default function ClassDetailPage({ params }: { params: Promise<{ id: stri
               </div>
 
               <div className="space-y-1">
+                <label className="text-xs font-bold text-zinc-500">Jenjang</label>
+                <select
+                  value={formJenjang}
+                  onChange={(e) => setFormJenjang(e.target.value)}
+                  required
+                  className="w-full bg-white border border-zinc-300 rounded-lg px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:border-strong-blue focus:ring-1 focus:ring-strong-blue"
+                >
+                  <option value="SD">SD</option>
+                  <option value="SMP">SMP</option>
+                  <option value="SMA">SMA</option>
+                </select>
+              </div>
+
+              <div className="space-y-1">
                 <label className="text-xs font-bold text-zinc-500">Deskripsi (Opsional)</label>
                 <textarea
                   placeholder="Deskripsi singkat mengenai kelas..."
@@ -1013,7 +1031,7 @@ export default function ClassDetailPage({ params }: { params: Promise<{ id: stri
                     >
                       <option value="">-- Pilih Mata Pelajaran --</option>
                       {subjects
-                        .filter((subj) => subj.jenjang === (modalStudent?.jenjang || "SD"))
+                        .filter((subj) => subj.jenjang === (kelas?.jenjang || "SD"))
                         .map((subj) => (
                           <option key={subj.id} value={subj.id}>
                             {subj.nama_mapel} ({subj.kategori})

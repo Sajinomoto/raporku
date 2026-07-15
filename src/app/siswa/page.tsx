@@ -38,6 +38,7 @@ interface Kelas {
   id: string;
   nama_kelas: string;
   tahun_ajaran: string;
+  jenjang: string;
 }
 
 interface MataPelajaran {
@@ -56,7 +57,7 @@ interface Siswa {
   semester: string;
   tahun_ajaran: string;
   asal_sekolah: string;
-  jenjang: string;
+  jenjang?: string;
   created_at: string;
 }
 
@@ -460,7 +461,7 @@ export default function SiswaPage() {
     try {
       const { data, error } = await supabase
         .from("kelas")
-        .select("id, nama_kelas, tahun_ajaran")
+        .select("id, nama_kelas, tahun_ajaran, jenjang")
         .order("nama_kelas", { ascending: true });
 
       if (error) throw error;
@@ -627,7 +628,6 @@ export default function SiswaPage() {
         semester: formSemester,
         tahun_ajaran: formTahun,
         asal_sekolah: formAsalSekolah,
-        jenjang: formJenjang,
       };
 
       if (isEditing) {
@@ -1155,13 +1155,13 @@ export default function SiswaPage() {
                             Status: Aktif
                           </span>
                           <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                            selectedStudent.jenjang === "SD"
+                            (classes.find(c => c.id === selectedStudent.kelas_id)?.jenjang || "SD") === "SD"
                               ? "bg-sky-500/10 text-sky-600 border border-sky-500/20"
-                              : selectedStudent.jenjang === "SMP"
+                              : (classes.find(c => c.id === selectedStudent.kelas_id)?.jenjang || "SD") === "SMP"
                               ? "bg-amber-500/10 text-[#A67800] border border-amber-500/20"
                               : "bg-red-500/10 text-red-600 border border-red-500/20"
                           }`}>
-                            Jenjang: {selectedStudent.jenjang || "SD"}
+                            Jenjang: {classes.find(c => c.id === selectedStudent.kelas_id)?.jenjang || "SD"}
                           </span>
                         </div>
                       </div>
@@ -1193,7 +1193,9 @@ export default function SiswaPage() {
                     </div>
                     <div className="space-y-1">
                       <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider block">Jenjang Pendidikan</span>
-                      <p className="font-bold text-zinc-800 bg-zinc-50 border border-zinc-100 rounded-lg px-3 py-2">{selectedStudent.jenjang || "SD"}</p>
+                      <p className="font-bold text-zinc-800 bg-zinc-50 border border-zinc-100 rounded-lg px-3 py-2">
+                        {classes.find(c => c.id === selectedStudent.kelas_id)?.jenjang || "SD"}
+                      </p>
                     </div>
                     <div className="space-y-1">
                       <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider block">Asal Sekolah</span>
@@ -1286,7 +1288,10 @@ export default function SiswaPage() {
                           >
                             <option value="">-- Pilih Mata Pelajaran --</option>
                             {subjects
-                              .filter((subj) => subj.jenjang === (selectedStudent?.jenjang || "SD"))
+                              .filter((subj) => {
+                                const studentClass = classes.find(c => c.id === selectedStudent?.kelas_id);
+                                return subj.jenjang === (studentClass?.jenjang || "SD");
+                              })
                               .map((subj) => (
                                 <option key={subj.id} value={subj.id}>
                                   {subj.nama_mapel} ({subj.kategori})
@@ -1704,20 +1709,6 @@ export default function SiswaPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-zinc-500">Jenjang</label>
-                  <select
-                    value={formJenjang}
-                    onChange={(e) => setFormJenjang(e.target.value)}
-                    required
-                    className="w-full bg-white border border-zinc-300 rounded-lg px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:border-strong-blue focus:ring-1 focus:ring-strong-blue"
-                  >
-                    <option value="SD">SD</option>
-                    <option value="SMP">SMP</option>
-                    <option value="SMA">SMA</option>
-                  </select>
-                </div>
-
-                <div className="space-y-1">
                   <label className="text-xs font-bold text-zinc-500">Kelas</label>
                   <select
                     value={formKelasId}
@@ -1731,9 +1722,7 @@ export default function SiswaPage() {
                     ))}
                   </select>
                 </div>
-              </div>
 
-              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-zinc-500">Asal Sekolah</label>
                   <input
@@ -1745,7 +1734,9 @@ export default function SiswaPage() {
                     className="w-full bg-white border border-zinc-300 rounded-lg px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:border-strong-blue focus:ring-1 focus:ring-strong-blue"
                   />
                 </div>
+              </div>
 
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-zinc-500">Semester</label>
                   <select
@@ -1757,9 +1748,7 @@ export default function SiswaPage() {
                     <option value="Genap">Genap</option>
                   </select>
                 </div>
-              </div>
 
-              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-zinc-500">Tahun Ajaran</label>
                   <input

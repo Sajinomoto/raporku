@@ -19,6 +19,7 @@ interface Kelas {
   nama_kelas: string;
   tahun_ajaran: string;
   deskripsi: string | null;
+  jenjang: string;
   created_at: string;
 }
 
@@ -34,6 +35,7 @@ export default function KelasPage() {
   const [formNama, setFormNama] = useState("");
   const [formTahun, setFormTahun] = useState("2026/2027");
   const [formDeskripsi, setFormDeskripsi] = useState("");
+  const [formJenjang, setFormJenjang] = useState("SD");
 
   useEffect(() => {
     fetchClasses();
@@ -85,6 +87,7 @@ export default function KelasPage() {
             nama_kelas: formNama,
             tahun_ajaran: formTahun,
             deskripsi: formDeskripsi || null,
+            jenjang: formJenjang,
           })
           .eq("id", formId);
 
@@ -96,6 +99,7 @@ export default function KelasPage() {
             nama_kelas: formNama,
             tahun_ajaran: formTahun,
             deskripsi: formDeskripsi || null,
+            jenjang: formJenjang,
           });
 
         if (error) throw error;
@@ -106,6 +110,7 @@ export default function KelasPage() {
       setIsEditing(false);
       setFormNama("");
       setFormDeskripsi("");
+      setFormJenjang("SD");
       fetchClasses();
     } catch (err) {
       console.error("Error saving class:", err);
@@ -117,6 +122,7 @@ export default function KelasPage() {
     setFormNama(kelas.nama_kelas);
     setFormTahun(kelas.tahun_ajaran);
     setFormDeskripsi(kelas.deskripsi || "");
+    setFormJenjang(kelas.jenjang || "SD");
     setIsEditing(true);
     setShowForm(true);
   };
@@ -150,6 +156,7 @@ export default function KelasPage() {
             setIsEditing(false);
             setFormNama("");
             setFormDeskripsi("");
+            setFormJenjang("SD");
             setShowForm(true);
           }}
           className="flex items-center gap-2 px-4 py-2.5 bg-strong-blue hover:bg-[#001D6E] text-white rounded-lg text-sm font-semibold transition-all shadow-lg shadow-strong-blue/10 cursor-pointer"
@@ -179,9 +186,20 @@ export default function KelasPage() {
               <Link href={`/kelas/${kelas.id}`} className="absolute inset-0 z-0 rounded-xl" />
               
               <div className="z-10 pointer-events-none">
-                <h3 className="font-black text-zinc-900 text-lg tracking-tight group-hover:text-strong-blue transition-colors">
-                  {kelas.nama_kelas}
-                </h3>
+                <div className="flex justify-between items-start">
+                  <h3 className="font-black text-zinc-900 text-lg tracking-tight group-hover:text-strong-blue transition-colors">
+                    {kelas.nama_kelas}
+                  </h3>
+                  <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                    kelas.jenjang === "SD"
+                      ? "bg-sky-500/10 text-sky-600 border border-sky-500/20"
+                      : kelas.jenjang === "SMP"
+                      ? "bg-amber-500/10 text-[#A67800] border border-amber-500/20"
+                      : "bg-red-500/10 text-red-600 border border-red-500/20"
+                  }`}>
+                    {kelas.jenjang || "SD"}
+                  </span>
+                </div>
                 <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-1.5 text-xs text-zinc-500 font-medium">
                   <div className="flex items-center gap-1">
                     <CalendarDays size={12} className="text-strong-blue" />
@@ -275,6 +293,20 @@ export default function KelasPage() {
                   onChange={(e) => setFormTahun(e.target.value)}
                   className="w-full bg-white border border-zinc-300 rounded-lg px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:border-strong-blue focus:ring-1 focus:ring-strong-blue"
                 />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-zinc-500">Jenjang</label>
+                <select
+                  value={formJenjang}
+                  onChange={(e) => setFormJenjang(e.target.value)}
+                  required
+                  className="w-full bg-white border border-zinc-300 rounded-lg px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:border-strong-blue focus:ring-1 focus:ring-strong-blue"
+                >
+                  <option value="SD">SD</option>
+                  <option value="SMP">SMP</option>
+                  <option value="SMA">SMA</option>
+                </select>
               </div>
 
               <div className="space-y-1">
