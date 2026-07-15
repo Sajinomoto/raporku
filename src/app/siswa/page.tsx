@@ -751,22 +751,36 @@ export default function SiswaPage() {
     chart: {
       id: "grades-bar",
       toolbar: { show: false },
-      foreColor: "#94a3b8",
+      foreColor: "#475569", // slate-600
     },
     plotOptions: {
       bar: {
         horizontal: true,
-        barHeight: "50%",
+        barHeight: "55%",
         borderRadius: 4,
       }
     },
-    colors: ["#6366f1"],
+    colors: ["#002583"], // Strong Blue
     xaxis: {
       categories: studentGrades.map(g => g.nama_mapel),
       max: 100,
+      labels: {
+        style: {
+          fontWeight: 600,
+          colors: "#475569"
+        }
+      }
+    },
+    yaxis: {
+      labels: {
+        style: {
+          fontWeight: 600,
+          colors: "#475569"
+        }
+      }
     },
     grid: {
-      borderColor: "#334155",
+      borderColor: "#e2e8f0", // slate-200
       xaxis: { lines: { show: true } }
     }
   };
@@ -783,18 +797,40 @@ export default function SiswaPage() {
     chart: {
       id: "radar-caps",
       toolbar: { show: false },
-      foreColor: "#94a3b8",
+      foreColor: "#475569",
     },
-    colors: ["#3b82f6"],
+    colors: ["#002583"], // Strong Blue
+    stroke: {
+      width: 2
+    },
+    fill: {
+      opacity: 0.15
+    },
+    markers: {
+      size: 4
+    },
     xaxis: {
       categories: studentGrades.map(g => g.nama_mapel),
+      labels: {
+        style: {
+          fontWeight: 700,
+          colors: Array(studentGrades.length).fill("#475569"),
+          fontSize: "9px"
+        }
+      }
     },
     yaxis: {
       max: 100,
       tickAmount: 5,
+      labels: {
+        style: {
+          fontWeight: 600,
+          colors: "#475569"
+        }
+      }
     },
     grid: {
-      borderColor: "#334155"
+      borderColor: "#e2e8f0"
     }
   };
 
@@ -809,26 +845,61 @@ export default function SiswaPage() {
   const donutChartOptions = {
     chart: {
       id: "donut-dist",
-      foreColor: "#94a3b8",
+      foreColor: "#475569",
     },
     labels: ["A (80-100)", "B (70-79)", "C (60-69)", "D (<60)"],
     colors: ["#10b981", "#3b82f6", "#f59e0b", "#ef4444"],
     legend: {
-      position: "bottom" as const,
+      position: "right" as const,
+      horizontalAlign: "left" as const,
+      fontSize: "11px",
+      fontWeight: 600,
+      markers: {
+        size: 5
+      },
+      formatter: function(val: string, opts: any) {
+        const seriesIndex = opts.seriesIndex;
+        const value = opts.w.globals.series[seriesIndex];
+        return val + ": " + value + " Mapel";
+      }
     },
     stroke: {
-      colors: ["#0f172a"]
+      colors: ["#ffffff"],
+      width: 2
     },
     plotOptions: {
       pie: {
         donut: {
+          size: "65%",
           labels: {
             show: true,
+            name: {
+              show: true,
+              fontSize: "10px",
+              fontWeight: 600,
+              color: "#64748b",
+              offsetY: -5
+            },
+            value: {
+              show: true,
+              fontSize: "16px",
+              fontWeight: 800,
+              color: "#0f172a",
+              offsetY: 5,
+              formatter: function(val: string) {
+                return val;
+              }
+            },
             total: {
               show: true,
-              label: "Total Mapel",
-              color: "#ffffff",
-              formatter: () => String(studentGrades.length)
+              label: "Mata Pelajaran",
+              color: "#64748b",
+              fontWeight: 700,
+              fontSize: "9px",
+              formatter: function (w: any) {
+                const total = w.globals.seriesTotals.reduce((a: number, b: number) => a + b, 0);
+                return String(total);
+              }
             }
           }
         }
@@ -1523,10 +1594,10 @@ export default function SiswaPage() {
                           options={barChartOptions} 
                           series={barChartSeries} 
                           type="bar" 
-                          height={200} 
+                          height={240} 
                         />
                       ) : (
-                        <div className="h-[200px] flex items-center justify-center text-[10px] text-zinc-500 font-medium">Belum ada nilai</div>
+                        <div className="h-[240px] flex items-center justify-center text-[10px] text-zinc-500 font-medium">Belum ada nilai</div>
                       )}
                     </div>
 
@@ -1537,10 +1608,10 @@ export default function SiswaPage() {
                           options={radarChartOptions} 
                           series={radarChartSeries} 
                           type="radar" 
-                          height={200} 
+                          height={240} 
                         />
                       ) : (
-                        <div className="h-[200px] flex items-center justify-center text-[10px] text-zinc-500 font-medium">Belum ada nilai</div>
+                        <div className="h-[240px] flex items-center justify-center text-[10px] text-zinc-500 font-medium">Belum ada nilai</div>
                       )}
                     </div>
 
@@ -1551,10 +1622,10 @@ export default function SiswaPage() {
                           options={donutChartOptions} 
                           series={donutChartSeries} 
                           type="donut" 
-                          height={200} 
+                          height={240} 
                         />
                       ) : (
-                        <div className="h-[200px] flex items-center justify-center text-[10px] text-zinc-500 font-medium">Belum ada nilai</div>
+                        <div className="h-[240px] flex items-center justify-center text-[10px] text-zinc-500 font-medium">Belum ada nilai</div>
                       )}
                     </div>
                   </div>
