@@ -801,7 +801,7 @@ export default function SiswaPage() {
     },
     plotOptions: {
       radar: {
-        size: 50, // Smaller size so labels never get cut off at boundaries
+        size: 75, // Now that it has full width, size 75 fits beautifully
         polygons: {
           strokeColors: "#e2e8f0",
           connectorColors: "#e2e8f0",
@@ -1601,7 +1601,7 @@ export default function SiswaPage() {
                   </div>
 
                   {/* Visualisasi Grafik Row (ApexCharts) */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 no-print">
+                  <div className="grid grid-cols-1 gap-6 no-print">
                     <div className="bg-white border border-zinc-200 rounded-xl p-4 space-y-2 shadow-xs">
                       <h4 className="text-xs font-bold text-strong-blue tracking-wide border-b border-zinc-200 pb-2">NILAI SETIAP MAPEL</h4>
                       {studentGrades.length > 0 ? (
