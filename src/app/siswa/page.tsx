@@ -930,28 +930,51 @@ export default function SiswaPage() {
       {/* CSS @media print style definition to render the report cleanly */}
       <style jsx global>{`
         @media print {
+          /* Hide non-print elements */
           aside, nav, header, button, .no-print {
             display: none !important;
           }
-          main, body, html {
+          
+          /* Override all parent wrapper containers' styles to prevent offsets and cut-off */
+          html, body, main, #__next, [class*="p-8"], [class*="flex-1"], [class*="space-y-6"] {
             background: #ffffff !important;
             color: #000000 !important;
             width: 100% !important;
-            height: auto !important;
+            max-width: 100% !important;
             padding: 0 !important;
             margin: 0 !important;
-          }
-          .print-container {
-            display: block !important;
-            background: #ffffff !important;
-            color: #000000 !important;
-            border: none !important;
-            padding: 20px !important;
-            max-width: 100% !important;
+            position: static !important;
+            float: none !important;
+            overflow: visible !important;
+            height: auto !important;
+            min-height: auto !important;
             box-shadow: none !important;
           }
+          
+          /* Target print container specifically */
+          .print-container {
+            width: 100% !important;
+            max-width: 100% !important;
+            padding: 8mm !important;
+            margin: 0 auto !important;
+            border: none !important;
+            box-shadow: none !important;
+            background: #ffffff !important;
+            color: #000000 !important;
+            display: block !important;
+            overflow: visible !important;
+            box-sizing: border-box !important;
+          }
+
+          /* Force exact A4 Page dimensions and safe margins */
+          @page {
+            size: A4 portrait;
+            margin: 10mm;
+          }
+          
+          /* Clean styles for print cards and text */
           .print-card {
-            background: #f8fafc !important;
+            background: #ffffff !important;
             border: 1px solid #cbd5e1 !important;
             color: #0f172a !important;
           }
@@ -965,7 +988,7 @@ export default function SiswaPage() {
             border-color: #cbd5e1 !important;
           }
           .print-fill-card {
-            background: #f1f5f9 !important;
+            background: #f8fafc !important;
           }
         }
       `}</style>
