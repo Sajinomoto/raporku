@@ -746,6 +746,12 @@ export default function SiswaPage() {
   const countC = studentGrades.filter(g => g.skor >= 60 && g.skor < 70).length;
   const countD = studentGrades.filter(g => g.skor < 60).length;
 
+  const cleanSubjectName = (name: string) => {
+    return name.replace(/\s*\[(SD|SMP|SMA)\]/g, "");
+  };
+
+  const dynamicBarHeight = Math.max(240, studentGrades.length * 20);
+
   // Chart configuration: Horizontal Bar
   const barChartOptions = {
     chart: {
@@ -756,13 +762,13 @@ export default function SiswaPage() {
     plotOptions: {
       bar: {
         horizontal: true,
-        barHeight: "55%",
+        barHeight: "65%",
         borderRadius: 4,
       }
     },
     colors: ["#002583"], // Strong Blue
     xaxis: {
-      categories: studentGrades.map(g => g.nama_mapel),
+      categories: studentGrades.map(g => cleanSubjectName(g.nama_mapel)),
       max: 100,
       labels: {
         style: {
@@ -801,7 +807,7 @@ export default function SiswaPage() {
     },
     plotOptions: {
       radar: {
-        size: 65, // Moderately smaller to accommodate the multiline labels comfortably
+        size: 70, // Optimized radar size for landscape/stacked width
         polygons: {
           strokeColors: "#e2e8f0",
           connectorColors: "#e2e8f0",
@@ -822,7 +828,7 @@ export default function SiswaPage() {
       size: 4
     },
     xaxis: {
-      categories: studentGrades.map(g => [g.nama_mapel, `(${g.skor})`]),
+      categories: studentGrades.map(g => [cleanSubjectName(g.nama_mapel), `(${g.skor})`]),
       labels: {
         style: {
           fontWeight: 700,
@@ -994,6 +1000,10 @@ export default function SiswaPage() {
             display: grid !important;
             grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
             gap: 15px !important;
+          }
+          .print-grid > div {
+            min-width: 0 !important;
+            overflow: hidden !important;
           }
         }
       `}</style>
@@ -1638,7 +1648,7 @@ export default function SiswaPage() {
                           options={barChartOptions} 
                           series={barChartSeries} 
                           type="bar" 
-                          height={240} 
+                          height={dynamicBarHeight} 
                         />
                       ) : (
                         <div className="h-[240px] flex items-center justify-center text-[10px] text-zinc-500 font-medium">Belum ada nilai</div>
