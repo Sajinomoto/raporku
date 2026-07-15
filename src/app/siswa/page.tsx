@@ -990,6 +990,11 @@ export default function SiswaPage() {
           .print-fill-card {
             background: #f8fafc !important;
           }
+          .print-grid {
+            display: grid !important;
+            grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+            gap: 15px !important;
+          }
         }
       `}</style>
 
@@ -1625,7 +1630,7 @@ export default function SiswaPage() {
                   </div>
 
                   {/* Visualisasi Grafik Row (ApexCharts) */}
-                  <div className="grid grid-cols-1 gap-6 no-print">
+                  <div className="grid grid-cols-1 gap-6 print-grid">
                     <div className="bg-white border border-zinc-200 rounded-xl p-4 space-y-2 shadow-xs">
                       <h4 className="text-xs font-bold text-strong-blue tracking-wide border-b border-zinc-200 pb-2">NILAI SETIAP MAPEL</h4>
                       {studentGrades.length > 0 ? (
