@@ -48,11 +48,6 @@ export default function Sidebar() {
       href: "/mapel",
       icon: BookOpen,
     },
-    {
-      name: "Input Nilai & Absen",
-      href: "/input-nilai",
-      icon: ClipboardCheck,
-    },
   ];
 
   return (

@@ -22,7 +22,12 @@ import {
   ClipboardPen,
   BookmarkCheck,
   UserRound,
-  ArrowLeft
+  ArrowLeft,
+  ClipboardCheck,
+  FileSpreadsheet,
+  Save,
+  AlertCircle,
+  CheckCircle2
 } from "lucide-react";
 
 // Dynamically import ReactApexChart to prevent SSR window error
@@ -33,6 +38,12 @@ interface Kelas {
   id: string;
   nama_kelas: string;
   tahun_ajaran: string;
+}
+
+interface MataPelajaran {
+  id: string;
+  nama_mapel: string;
+  kategori: string;
 }
 
 interface Siswa {
@@ -80,7 +91,7 @@ export default function SiswaPage() {
   const [studentAttendance, setStudentAttendance] = useState<Kehadiran | null>(null);
   const [studentNote, setStudentNote] = useState<CatatanGuru | null>(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
-  const [activeTab, setActiveTab] = useState<"detail" | "rapor">("detail");
+  const [activeTab, setActiveTab] = useState<"detail" | "rapor" | "input">("detail");
   const [showPhotoModal, setShowPhotoModal] = useState<string | null>(null);
 
   // Form states
@@ -97,13 +108,286 @@ export default function SiswaPage() {
   const [formFileUrl, setFormFileUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
 
+  // Input Inline states
+  const [subjects, setSubjects] = useState<MataPelajaran[]>([]);
+  const [selectedSubjectId, setSelectedSubjectId] = useState("");
+  const [skor, setSkor] = useState<number | "">("");
+  const [hadir, setHadir] = useState<number>(0);
+  const [sakit, setSakit] = useState<number>(0);
+  const [izin, setIzen] = useState<number>(0);
+  const [alpha, setAlpha] = useState<number>(0);
+  const [catatan, setCatatan] = useState("");
+  const [namaGuru, setNamaGuru] = useState("");
+  const [modalSaving, setModalSaving] = useState(false);
+  const [modalFeedback, setModalFeedback] = useState<{ text: string; type: "success" | "error" } | null>(null);
+  const [showCalendarModal, setShowCalendarModal] = useState(false);
+  const [calendarDays, setCalendarDays] = useState<Record<number, "H" | "S" | "I" | "A" | "N">>({});
+  const [activeCategory, setActiveCategory] = useState<"H" | "S" | "I" | "A" | "N">("H");
+
   // Ref for print area
   const printRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchStudents();
     fetchClasses();
+    fetchSubjects();
   }, []);
+
+  const fetchSubjects = async () => {
+    try {
+      const { data } = await supabase
+        .from("mata_pelajaran")
+        .select("id, nama_mapel, kategori")
+        .order("nama_mapel");
+      setSubjects(data || []);
+    } catch (err) {
+      console.error("Error fetching subjects:", err);
+    }
+  };
+
+  const openInputInline = async (student: Siswa) => {
+    setSelectedSubjectId("");
+    setSkor("");
+    setHadir(0);
+    setSakit(0);
+    setIzen(0);
+    setAlpha(0);
+    setCatatan("");
+    setNamaGuru("");
+    setModalFeedback(null);
+
+    try {
+      // 1. Fetch attendance
+      const { data: attData } = await supabase
+        .from("kehadiran")
+        .select("hadir, sakit, izin, alpha")
+        .eq("siswa_id", student.id)
+        .maybeSingle();
+
+      if (attData) {
+        setHadir(attData.hadir);
+        setSakit(attData.sakit);
+        setIzen(attData.izin);
+        setAlpha(attData.alpha);
+      }
+
+      // 2. Fetch notes
+      const { data: noteData } = await supabase
+        .from("catatan_guru")
+        .select("catatan, nama_guru")
+        .eq("siswa_id", student.id)
+        .maybeSingle();
+
+      if (noteData) {
+        setCatatan(noteData.catatan);
+        setNamaGuru(noteData.nama_guru);
+      }
+    } catch (err) {
+      console.error("Error loading inline data:", err);
+    }
+  };
+
+  const openCalendarModal = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+    const initialDays: Record<number, "H" | "S" | "I" | "A" | "N"> = {};
+    
+    let hLeft = hadir;
+    let sLeft = sakit;
+    let iLeft = izin;
+    let aLeft = alpha;
+
+    for (let d = 1; d <= daysInMonth; d++) {
+      if (hLeft > 0) {
+        initialDays[d] = "H";
+        hLeft--;
+      } else if (sLeft > 0) {
+        initialDays[d] = "S";
+        sLeft--;
+      } else if (iLeft > 0) {
+        initialDays[d] = "I";
+        iLeft--;
+      } else if (aLeft > 0) {
+        initialDays[d] = "A";
+        aLeft--;
+      } else {
+        initialDays[d] = "N";
+      }
+    }
+
+    setCalendarDays(initialDays);
+    setActiveCategory("H");
+    setShowCalendarModal(true);
+  };
+
+  const clickDay = (dayNum: number) => {
+    setCalendarDays((prev) => ({
+      ...prev,
+      [dayNum]: activeCategory
+    }));
+  };
+
+  const getCalendarAggregates = () => {
+    const vals = Object.values(calendarDays);
+    const hCount = vals.filter((v) => v === "H").length;
+    const sCount = vals.filter((v) => v === "S").length;
+    const iCount = vals.filter((v) => v === "I").length;
+    const aCount = vals.filter((v) => v === "A").length;
+    return {
+      hadir: hCount,
+      sakit: sCount,
+      izin: iCount,
+      alpha: aCount,
+      total: hCount + sCount + iCount + aCount,
+    };
+  };
+
+  const saveCalendarAttendance = () => {
+    const aggs = getCalendarAggregates();
+    setHadir(aggs.hadir);
+    setSakit(aggs.sakit);
+    setIzen(aggs.izin);
+    setAlpha(aggs.alpha);
+    setShowCalendarModal(false);
+  };
+
+  const handleSubjectChange = async (subjectId: string) => {
+    setSelectedSubjectId(subjectId);
+    if (!selectedStudent || !subjectId) {
+      setSkor("");
+      return;
+    }
+    try {
+      const { data: gradeData } = await supabase
+        .from("nilai")
+        .select("skor")
+        .eq("siswa_id", selectedStudent.id)
+        .eq("mapel_id", subjectId)
+        .maybeSingle();
+
+      if (gradeData) {
+        setSkor(gradeData.skor !== null ? Number(gradeData.skor) : "");
+      } else {
+        setSkor("");
+      }
+    } catch (err) {
+      console.error("Error loading student score:", err);
+    }
+  };
+
+  const handleSaveModalData = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedStudent) return;
+    setModalSaving(true);
+    setModalFeedback(null);
+
+    try {
+      // 1. Save grade if specified
+      if (selectedSubjectId && skor !== "") {
+        if (Number(skor) < 0 || Number(skor) > 100) {
+          throw new Error("Skor nilai harus berada dalam rentang 0 sampai 100.");
+        }
+
+        const { data: existingGrade } = await supabase
+          .from("nilai")
+          .select("id")
+          .eq("siswa_id", selectedStudent.id)
+          .eq("mapel_id", selectedSubjectId)
+          .maybeSingle();
+
+        if (existingGrade) {
+          const { error } = await supabase
+            .from("nilai")
+            .update({ skor: Number(skor) })
+            .eq("id", existingGrade.id);
+          if (error) throw error;
+        } else {
+          const { error } = await supabase
+            .from("nilai")
+            .insert({
+              siswa_id: selectedStudent.id,
+              mapel_id: selectedSubjectId,
+              skor: Number(skor)
+            });
+          if (error) throw error;
+        }
+      }
+
+      // 2. Save Attendance
+      const totalSesi = hadir + sakit + izin + alpha;
+      const { data: existingAtt } = await supabase
+        .from("kehadiran")
+        .select("id")
+        .eq("siswa_id", selectedStudent.id)
+        .maybeSingle();
+
+      if (existingAtt) {
+        const { error } = await supabase
+          .from("kehadiran")
+          .update({
+            hadir,
+            sakit,
+            izin,
+            alpha,
+            total_sesi: totalSesi
+          })
+          .eq("id", existingAtt.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("kehadiran")
+          .insert({
+            siswa_id: selectedStudent.id,
+            hadir,
+            sakit,
+            izin,
+            alpha,
+            total_sesi: totalSesi
+          });
+        if (error) throw error;
+      }
+
+      // 3. Save Notes
+      const { data: existingNote } = await supabase
+        .from("catatan_guru")
+        .select("id")
+        .eq("siswa_id", selectedStudent.id)
+        .maybeSingle();
+
+      if (existingNote) {
+        const { error } = await supabase
+          .from("catatan_guru")
+          .update({
+            catatan,
+            nama_guru: namaGuru || "-"
+          })
+          .eq("id", existingNote.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("catatan_guru")
+          .insert({
+            siswa_id: selectedStudent.id,
+            catatan,
+            nama_guru: namaGuru || "-"
+          });
+        if (error) throw error;
+      }
+
+      setModalFeedback({ text: "Data berhasil disimpan!", type: "success" });
+      fetchStudentReportData(selectedStudent); // Reload current student report view!
+      setTimeout(() => {
+        setModalFeedback(null);
+      }, 3000);
+    } catch (err: any) {
+      setModalFeedback({ text: err.message || "Gagal menyimpan data.", type: "error" });
+    } finally {
+      setModalSaving(false);
+    }
+  };
 
   const fetchStudents = async () => {
     setLoading(true);
@@ -714,6 +998,22 @@ export default function SiswaPage() {
                 </button>
                 <button
                   type="button"
+                  onClick={() => {
+                    setActiveTab("input");
+                    if (selectedStudent) {
+                      openInputInline(selectedStudent);
+                    }
+                  }}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    activeTab === "input"
+                      ? "bg-strong-blue text-white shadow-xs"
+                      : "text-zinc-500 hover:bg-zinc-100 hover:text-strong-blue"
+                  }`}
+                >
+                  Input Nilai & Absen
+                </button>
+                <button
+                  type="button"
                   onClick={() => setActiveTab("rapor")}
                   className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                     activeTab === "rapor"
@@ -854,6 +1154,146 @@ export default function SiswaPage() {
                     </div>
                   </div>
 
+                </div>
+              </div>
+
+              {/* Tab 3: Inline Input Nilai & Kehadiran (hidden when not active) */}
+              <div className={`no-print ${activeTab === "input" ? "block" : "hidden"}`}>
+                <div className="bg-white border border-zinc-200 rounded-xl p-6 shadow-sm space-y-6">
+                  <div>
+                    <h3 className="font-bold text-strong-blue text-sm border-b border-zinc-100 pb-2">Input Nilai & Kehadiran</h3>
+                    <p className="text-xs text-zinc-500 font-medium mt-1">Siswa: {selectedStudent.nama_lengkap} (NIS: {selectedStudent.nis})</p>
+                  </div>
+
+                  <form onSubmit={handleSaveModalData} className="space-y-6">
+                    {modalFeedback && (
+                      <div className={`p-4 rounded-xl border flex items-start gap-3 transition-all duration-300 ${
+                        modalFeedback.type === "success" 
+                          ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-600" 
+                          : "bg-red-500/10 border-red-500/20 text-red-600"
+                      }`}>
+                        {modalFeedback.type === "success" ? <CheckCircle2 size={18} className="shrink-0" /> : <AlertCircle size={18} className="shrink-0" />}
+                        <p className="text-xs font-bold">{modalFeedback.text}</p>
+                      </div>
+                    )}
+
+                    <div className="space-y-4">
+                      {/* Academic Section */}
+                      <div className="space-y-4 bg-zinc-50/50 p-4 rounded-xl border border-zinc-100">
+                        <h4 className="font-bold text-strong-blue text-xs border-b border-zinc-200 pb-2 flex items-center gap-2">
+                          <FileSpreadsheet size={14} /> Nilai Akademik
+                        </h4>
+                        
+                        <div className="space-y-1">
+                          <label className="text-xs font-bold text-zinc-500 flex items-center gap-1.5">Mata Pelajaran</label>
+                          <select
+                            value={selectedSubjectId}
+                            onChange={(e) => handleSubjectChange(e.target.value)}
+                            className="w-full bg-white border border-zinc-300 rounded-lg px-3 py-2 text-xs text-zinc-900 focus:outline-none focus:border-strong-blue focus:ring-1 focus:ring-strong-blue"
+                          >
+                            <option value="">-- Pilih Mata Pelajaran --</option>
+                            {subjects.map((subj) => (
+                              <option key={subj.id} value={subj.id}>
+                                {subj.nama_mapel} ({subj.kategori})
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {selectedSubjectId && (
+                          <div className="space-y-1 animate-fade-in">
+                            <label className="text-xs font-bold text-zinc-500 block">Skor Nilai</label>
+                            <input
+                              type="number"
+                              min={0}
+                              max={100}
+                              required
+                              placeholder="Rentang 0 - 100"
+                              value={skor}
+                              onChange={(e) => setSkor(e.target.value === "" ? "" : Number(e.target.value))}
+                              className="w-full bg-white border border-zinc-300 rounded-lg px-3 py-2 text-xs text-zinc-900 focus:outline-none focus:border-strong-blue focus:ring-1 focus:ring-strong-blue"
+                            />
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Attendance Section */}
+                      <div className="space-y-4 bg-zinc-50/50 p-4 rounded-xl border border-zinc-100">
+                        <div className="flex justify-between items-center border-b border-zinc-200 pb-2">
+                          <h4 className="font-bold text-strong-blue text-xs flex items-center gap-2">
+                            <Clock size={14} /> Rekap Kehadiran
+                          </h4>
+                          <button
+                            type="button"
+                            onClick={openCalendarModal}
+                            className="px-3 py-1.5 bg-mustard hover:bg-[#E6A600] text-strong-blue font-bold rounded-lg text-[10px] flex items-center gap-1 cursor-pointer transition-all shadow-xs border border-mustard/35 hover:scale-105 active:scale-95"
+                          >
+                            Atur Kehadiran
+                          </button>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-center">
+                          <div className="bg-white border border-zinc-200 rounded-lg p-2 flex flex-col justify-center shadow-2xs">
+                            <span className="text-[9px] text-zinc-400 font-bold block uppercase tracking-wider">Hadir</span>
+                            <span className="text-xs font-extrabold text-emerald-600 mt-1 block">{hadir} Hari</span>
+                          </div>
+                          <div className="bg-white border border-zinc-200 rounded-lg p-2 flex flex-col justify-center shadow-2xs">
+                            <span className="text-[9px] text-zinc-400 font-bold block uppercase tracking-wider">Sakit</span>
+                            <span className="text-xs font-extrabold text-amber-500 mt-1 block">{sakit} Hari</span>
+                          </div>
+                          <div className="bg-white border border-zinc-200 rounded-lg p-2 flex flex-col justify-center shadow-2xs">
+                            <span className="text-[9px] text-zinc-400 font-bold block uppercase tracking-wider">Izin</span>
+                            <span className="text-xs font-extrabold text-strong-blue mt-1 block">{izin} Hari</span>
+                          </div>
+                          <div className="bg-white border border-zinc-200 rounded-lg p-2 flex flex-col justify-center shadow-2xs">
+                            <span className="text-[9px] text-zinc-400 font-bold block uppercase tracking-wider">Alpa</span>
+                            <span className="text-xs font-extrabold text-red-500 mt-1 block">{alpha} Hari</span>
+                          </div>
+                          <div className="bg-white border border-zinc-200 rounded-lg p-2 flex flex-col justify-center shadow-2xs col-span-2 sm:col-span-1 bg-zinc-50 border-dashed">
+                            <span className="text-[9px] text-zinc-400 font-bold block uppercase tracking-wider">Total</span>
+                            <span className="text-xs font-extrabold text-zinc-800 mt-1 block">{hadir + sakit + izin + alpha} Hari</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Note Section */}
+                    <div className="space-y-3 bg-zinc-50/50 p-4 rounded-xl border border-zinc-100">
+                      <h4 className="font-bold text-strong-blue text-xs border-b border-zinc-200 pb-2">Catatan & Wali Kelas</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="md:col-span-2 space-y-1">
+                          <label className="text-[10px] font-bold text-zinc-500">Catatan Perkembangan Siswa</label>
+                          <textarea
+                            placeholder="Masukkan catatan mengenai kepribadian/prestasi siswa..."
+                            value={catatan}
+                            onChange={(e) => setCatatan(e.target.value)}
+                            rows={2}
+                            className="w-full bg-white border border-zinc-300 rounded-lg px-3 py-2 text-xs text-zinc-900 focus:outline-none focus:border-strong-blue focus:ring-1 focus:ring-strong-blue"
+                          />
+                        </div>
+                        <div className="md:col-span-1 space-y-1">
+                          <label className="text-[10px] font-bold text-zinc-500">Nama Wali Kelas</label>
+                          <input
+                            type="text"
+                            placeholder="Nama Lengkap & Gelar"
+                            value={namaGuru}
+                            onChange={(e) => setNamaGuru(e.target.value)}
+                            className="w-full bg-white border border-zinc-300 rounded-lg px-3 py-2 text-xs text-zinc-900 focus:outline-none focus:border-strong-blue focus:ring-1 focus:ring-strong-blue"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end gap-2 pt-2 border-t border-zinc-100">
+                      <button
+                        type="submit"
+                        disabled={modalSaving}
+                        className="flex items-center gap-1.5 px-4 py-2 bg-strong-blue hover:bg-[#001D6E] text-white rounded-lg text-xs font-bold transition-all shadow-md shadow-strong-blue/10 cursor-pointer disabled:opacity-50"
+                      >
+                        <Save size={14} /> {modalSaving ? "Menyimpan..." : "Simpan Data"}
+                      </button>
+                    </div>
+                  </form>
                 </div>
               </div>
 
@@ -1300,6 +1740,182 @@ export default function SiswaPage() {
                 height={500}
                 className="max-w-full max-h-[70vh] rounded-2xl object-contain shadow-inner"
               />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Calendar Modal */}
+      {showCalendarModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+          <div className="bg-white border border-zinc-200 rounded-xl w-full max-w-2xl shadow-2xl overflow-hidden animate-scale-up">
+            <div className="flex justify-between items-center p-4 border-b border-zinc-200 bg-zinc-50">
+              <div>
+                <h3 className="font-bold text-zinc-900 text-sm flex items-center gap-1.5">
+                  <Clock size={16} className="text-strong-blue" /> Atur Kehadiran
+                </h3>
+                <p className="text-[10px] text-zinc-500 font-bold uppercase mt-0.5">
+                  {new Date().toLocaleString("id-ID", { month: "long", year: "numeric" })}
+                </p>
+              </div>
+              <button 
+                onClick={() => setShowCalendarModal(false)}
+                className="p-1 hover:bg-zinc-200 text-zinc-400 hover:text-zinc-800 rounded-lg cursor-pointer transition-colors"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="p-4 space-y-4">
+              <p className="text-[10px] text-zinc-400 font-medium text-center bg-zinc-50 border border-zinc-200/60 p-2 rounded-lg leading-relaxed">
+                💡 Pilih kategori kehadiran di sebelah kanan, lalu klik tanggal pada kalender di bawah untuk menerapkannya.
+              </p>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                {/* Left/Center Area: Calendar Grid */}
+                <div className="md:col-span-2 space-y-3">
+                  {/* Day Headings */}
+                  <div className="grid grid-cols-7 gap-1.5 text-center text-[10px] font-bold text-zinc-400 border-b border-zinc-100 pb-1.5">
+                    <div>Min</div>
+                    <div>Sen</div>
+                    <div>Sel</div>
+                    <div>Rab</div>
+                    <div>Kam</div>
+                    <div>Jum</div>
+                    <div>Sab</div>
+                  </div>
+
+                  {/* Calendar Grid cells */}
+                  <div className="grid grid-cols-7 gap-1.5 justify-items-center">
+                    {/* Blank days index offset */}
+                    {Array.from({ length: new Date(new Date().getFullYear(), new Date().getMonth(), 1).getDay() }).map((_, idx) => (
+                      <div key={`offset-${idx}`} className="w-9 h-9"></div>
+                    ))}
+
+                    {/* Active calendar days */}
+                    {Object.keys(calendarDays).map((dayStr) => {
+                      const dayNum = Number(dayStr);
+                      const status = calendarDays[dayNum];
+                      const statusColors = {
+                        H: "bg-emerald-500 text-white hover:bg-emerald-600 shadow-xs border border-emerald-500",
+                        S: "bg-amber-500 text-white hover:bg-amber-600 shadow-xs border border-amber-500",
+                        I: "bg-strong-blue text-white hover:bg-[#001D6E] shadow-xs border border-strong-blue",
+                        A: "bg-red-500 text-white hover:bg-red-600 shadow-xs border border-red-500",
+                        N: "bg-zinc-50 hover:bg-zinc-100 text-zinc-400 border border-zinc-200"
+                      };
+                      return (
+                        <button
+                          key={`day-${dayNum}`}
+                          type="button"
+                          onClick={() => clickDay(dayNum)}
+                          className={`w-9 h-9 rounded-lg font-bold text-xs flex flex-col items-center justify-center transition-all cursor-pointer select-none active:scale-90 ${statusColors[status]}`}
+                        >
+                          <span>{dayNum}</span>
+                          <span className="text-[6px] opacity-75 leading-none mt-0.5">{status === "N" ? "-" : status}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Right Area: Category Selector Brush */}
+                <div className="md:col-span-1 border-t md:border-t-0 md:border-l border-zinc-200 pt-4 md:pt-0 md:pl-5 flex flex-col justify-start space-y-2.5">
+                  <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block mb-1">Pilih Kategori</span>
+                  
+                  <button
+                    type="button"
+                    onClick={() => setActiveCategory("H")}
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer select-none border ${
+                      activeCategory === "H" 
+                        ? "bg-emerald-500 text-white border-emerald-500 shadow-xs ring-2 ring-emerald-500/30" 
+                        : "bg-emerald-500/10 text-emerald-600 border-emerald-300/40 hover:bg-emerald-500/20"
+                    }`}
+                  >
+                    <span>Hadir</span>
+                    <span className="text-[10px] opacity-80">(H)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setActiveCategory("S")}
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer select-none border ${
+                      activeCategory === "S" 
+                        ? "bg-amber-500 text-white border-amber-500 shadow-xs ring-2 ring-amber-500/30" 
+                        : "bg-amber-500/10 text-amber-600 border-amber-300/40 hover:bg-amber-500/20"
+                    }`}
+                  >
+                    <span>Sakit</span>
+                    <span className="text-[10px] opacity-80">(S)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setActiveCategory("I")}
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer select-none border ${
+                      activeCategory === "I" 
+                        ? "bg-strong-blue text-white border-strong-blue shadow-xs ring-2 ring-strong-blue/30" 
+                        : "bg-strong-blue/10 text-strong-blue border-strong-blue/30 hover:bg-strong-blue/20"
+                    }`}
+                  >
+                    <span>Izin</span>
+                    <span className="text-[10px] opacity-80">(I)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setActiveCategory("A")}
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer select-none border ${
+                      activeCategory === "A" 
+                        ? "bg-red-500 text-white border-red-500 shadow-xs ring-2 ring-red-500/30" 
+                        : "bg-red-500/10 text-red-600 border-red-300/40 hover:bg-red-500/20"
+                    }`}
+                  >
+                    <span>Alpa</span>
+                    <span className="text-[10px] opacity-80">(A)</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setActiveCategory("N")}
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer select-none border ${
+                      activeCategory === "N" 
+                        ? "bg-zinc-500 text-white border-zinc-500 shadow-xs ring-2 ring-zinc-500/30" 
+                        : "bg-zinc-100 text-zinc-600 border-zinc-300 hover:bg-zinc-200"
+                    }`}
+                  >
+                    <span>Kosongkan</span>
+                    <span className="text-[10px] opacity-80">(-)</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer with calculated live aggregates */}
+            <div className="p-4 border-t border-zinc-200 bg-zinc-50 space-y-3">
+              <div className="flex items-center justify-between text-[10px] font-extrabold text-zinc-600 bg-white border border-zinc-200 p-2 rounded-lg">
+                <span className="text-emerald-600">H: {getCalendarAggregates().hadir}</span>
+                <span className="text-amber-500">S: {getCalendarAggregates().sakit}</span>
+                <span className="text-strong-blue">I: {getCalendarAggregates().izin}</span>
+                <span className="text-red-500">A: {getCalendarAggregates().alpha}</span>
+                <span className="text-zinc-800 border-l border-zinc-200 pl-2">Total: {getCalendarAggregates().total} Hari</span>
+              </div>
+
+              <div className="flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowCalendarModal(false)}
+                  className="px-3 py-1.5 hover:bg-zinc-200 text-zinc-500 hover:text-zinc-800 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  onClick={saveCalendarAttendance}
+                  className="px-3 py-1.5 bg-strong-blue hover:bg-[#001D6E] text-white rounded-lg text-xs font-bold transition-all shadow-md shadow-strong-blue/10 cursor-pointer"
+                >
+                  Terapkan
+                </button>
+              </div>
             </div>
           </div>
         </div>
