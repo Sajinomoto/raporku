@@ -11,7 +11,8 @@ import {
   X,
   CalendarDays,
   ChevronRight,
-  Users
+  Users,
+  AlertCircle
 } from "lucide-react";
 
 interface Kelas {
@@ -36,6 +37,7 @@ export default function KelasPage() {
   const [formTahun, setFormTahun] = useState("2026/2027");
   const [formDeskripsi, setFormDeskripsi] = useState("");
   const [formJenjang, setFormJenjang] = useState("SD");
+  const [confirmDeleteClass, setConfirmDeleteClass] = useState<Kelas | null>(null);
 
   useEffect(() => {
     fetchClasses();
@@ -127,9 +129,7 @@ export default function KelasPage() {
     setShowForm(true);
   };
 
-  const handleDeleteClass = async (id: string) => {
-    if (!confirm("Apakah Anda yakin ingin menghapus kelas ini? Siswa di kelas ini tidak akan dihapus, melainkan dikeluarkan dari kelas.")) return;
-
+  const executeDeleteClass = async (id: string) => {
     try {
       const { error } = await supabase
         .from("kelas")
@@ -137,6 +137,7 @@ export default function KelasPage() {
         .eq("id", id);
 
       if (error) throw error;
+      setConfirmDeleteClass(null);
       fetchClasses();
     } catch (err) {
       console.error("Error deleting class:", err);
@@ -240,7 +241,7 @@ export default function KelasPage() {
                     onClick={(e) => {
                       e.stopPropagation();
                       e.preventDefault();
-                      handleDeleteClass(kelas.id);
+                      setConfirmDeleteClass(kelas);
                     }}
                     className="p-1.5 hover:bg-red-500/10 text-zinc-500 hover:text-red-600 rounded-md transition-colors cursor-pointer"
                     title="Hapus Kelas"
@@ -336,6 +337,42 @@ export default function KelasPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Konfirmasi Hapus Kelas */}
+      {confirmDeleteClass && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+          <div className="bg-white border border-zinc-200 rounded-xl w-full max-w-sm shadow-2xl overflow-hidden animate-scale-up">
+            <div className="p-5 border-b border-zinc-200 bg-zinc-50 flex items-center gap-2">
+              <AlertCircle className="text-red-500" size={18} />
+              <h3 className="font-extrabold text-zinc-900 text-sm">Konfirmasi Hapus Kelas</h3>
+            </div>
+            <div className="p-5 space-y-3">
+              <p className="text-xs text-zinc-600 leading-relaxed font-medium">
+                Apakah Anda yakin ingin menghapus kelas <strong className="text-zinc-900">{confirmDeleteClass.nama_kelas}</strong>?
+              </p>
+              <p className="text-[11px] text-zinc-400 font-medium">
+                Siswa di kelas ini tidak akan dihapus, melainkan dikeluarkan dari kelas (status menjadi "Belum Ada Kelas").
+              </p>
+            </div>
+            <div className="p-4 bg-zinc-50 border-t border-zinc-200 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setConfirmDeleteClass(null)}
+                className="px-3.5 py-2 hover:bg-zinc-200 text-zinc-500 hover:text-zinc-800 rounded-lg text-xs font-bold transition-all cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={() => executeDeleteClass(confirmDeleteClass.id)}
+                className="px-3.5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold transition-all shadow-md cursor-pointer"
+              >
+                Hapus
+              </button>
+            </div>
           </div>
         </div>
       )}
