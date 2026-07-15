@@ -123,6 +123,9 @@ export default function SiswaPage() {
   const [showCalendarModal, setShowCalendarModal] = useState(false);
   const [calendarDays, setCalendarDays] = useState<Record<number, "H" | "S" | "I" | "A" | "N">>({});
   const [activeCategory, setActiveCategory] = useState<"H" | "S" | "I" | "A" | "N">("H");
+  const [calendarYear, setCalendarYear] = useState<number>(new Date().getFullYear());
+  const [calendarMonth, setCalendarMonth] = useState<number>(new Date().getMonth());
+  const [confirmDeleteStudent, setConfirmDeleteStudent] = useState<Siswa | null>(null);
 
   // Ref for print area
   const printRef = useRef<HTMLDivElement>(null);
@@ -191,8 +194,11 @@ export default function SiswaPage() {
     const now = new Date();
     const year = now.getFullYear();
     const month = now.getMonth();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    
+    setCalendarYear(year);
+    setCalendarMonth(month);
 
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
     const initialDays: Record<number, "H" | "S" | "I" | "A" | "N"> = {};
     
     let hLeft = hadir;
@@ -221,6 +227,39 @@ export default function SiswaPage() {
     setCalendarDays(initialDays);
     setActiveCategory("H");
     setShowCalendarModal(true);
+  };
+
+  const handleMonthChange = (newMonth: number, newYear: number) => {
+    const aggs = getCalendarAggregates();
+    setCalendarMonth(newMonth);
+    setCalendarYear(newYear);
+
+    const daysInMonth = new Date(newYear, newMonth + 1, 0).getDate();
+    const initialDays: Record<number, "H" | "S" | "I" | "A" | "N"> = {};
+    let hLeft = aggs.hadir;
+    let sLeft = aggs.sakit;
+    let iLeft = aggs.izin;
+    let aLeft = aggs.alpha;
+
+    for (let d = 1; d <= daysInMonth; d++) {
+      if (hLeft > 0) {
+        initialDays[d] = "H";
+        hLeft--;
+      } else if (sLeft > 0) {
+        initialDays[d] = "S";
+        sLeft--;
+      } else if (iLeft > 0) {
+        initialDays[d] = "I";
+        iLeft--;
+      } else if (aLeft > 0) {
+        initialDays[d] = "A";
+        aLeft--;
+      } else {
+        initialDays[d] = "N";
+      }
+    }
+
+    setCalendarDays(initialDays);
   };
 
   const clickDay = (dayNum: number) => {
@@ -629,9 +668,7 @@ export default function SiswaPage() {
     setShowForm(true);
   };
 
-  const handleDeleteStudent = async (id: string) => {
-    if (!confirm("Apakah Anda yakin ingin menghapus data siswa ini? Semua nilai dan absensi yang terhubung juga akan dihapus.")) return;
-
+  const executeDeleteStudent = async (id: string) => {
     try {
       const { error } = await supabase
         .from("siswa")
@@ -640,6 +677,7 @@ export default function SiswaPage() {
 
       if (error) throw error;
       
+      setConfirmDeleteStudent(null);
       if (selectedStudent?.id === id) {
         setSelectedStudent(null);
       }
@@ -655,9 +693,12 @@ export default function SiswaPage() {
 
   // Filter students
   const filteredStudents = students.filter((student) => {
-    const matchesSearch = student.nama_lengkap.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          student.nis.includes(searchQuery);
-    const matchesClass = selectedClassFilter === "all" || student.kelas_id === selectedClassFilter;
+    const query = searchQuery.toLowerCase();
+    const matchesSearch = student.nama_lengkap.toLowerCase().includes(query) || 
+                          student.nis.includes(searchQuery) ||
+                          (student.asal_sekolah && student.asal_sekolah.toLowerCase().includes(query));
+    const matchesClass = selectedClassFilter === "all" || 
+                         (selectedClassFilter === "none" ? !student.kelas_id : student.kelas_id === selectedClassFilter);
     return matchesSearch && matchesClass;
   });
 
@@ -854,7 +895,7 @@ export default function SiswaPage() {
             <Search className="absolute left-3.5 top-3 text-zinc-400" size={16} />
             <input
               type="text"
-              placeholder="Cari berdasarkan nama atau NIS..."
+              placeholder="Cari berdasarkan nama, NIS, atau asal sekolah..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full bg-white border border-zinc-300 rounded-lg pl-10 pr-4 py-2 text-sm text-zinc-900 focus:outline-none focus:border-strong-blue focus:ring-1 focus:ring-strong-blue"
@@ -918,9 +959,17 @@ export default function SiswaPage() {
                       </h3>
                       <p className="text-xs text-zinc-500 font-medium">NIS: {student.nis}</p>
                       
-                      <div className="flex items-center gap-1.5 text-xs text-zinc-500 mt-2 font-medium">
-                        <Layers size={12} className="text-strong-blue" />
-                        <span>{studentClass ? studentClass.nama_kelas : "Belum ada kelas"}</span>
+                      <div className="flex flex-col gap-1 mt-2">
+                        <div className="flex items-center gap-1.5 text-xs text-zinc-500 font-medium">
+                          <Layers size={12} className="text-strong-blue shrink-0" />
+                          <span className="line-clamp-1">{studentClass ? studentClass.nama_kelas : "Belum ada kelas"}</span>
+                        </div>
+                        {student.asal_sekolah && (
+                          <div className="flex items-center gap-1.5 text-xs text-zinc-500 font-medium">
+                            <School size={12} className="text-strong-blue shrink-0" />
+                            <span className="line-clamp-1">{student.asal_sekolah}</span>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -954,7 +1003,7 @@ export default function SiswaPage() {
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
-                          handleDeleteStudent(student.id);
+                          setConfirmDeleteStudent(student);
                         }}
                         className="p-1.5 hover:bg-red-500/10 text-zinc-500 hover:text-red-600 rounded-md cursor-pointer"
                         title="Hapus Siswa"
@@ -1148,7 +1197,16 @@ export default function SiswaPage() {
                       <div>
                         <span className="text-[9px] text-zinc-400 font-bold uppercase tracking-wider block">Total Kehadiran Aktif</span>
                         <p className="font-extrabold text-emerald-600 text-sm">
-                          {studentAttendance ? `${studentAttendance.hadir} Sesi` : "0 Sesi"}
+                          {(() => {
+                            if (!studentAttendance) return "0 Sesi | 0% Kehadiran";
+                            const h = studentAttendance.hadir || 0;
+                            const s = studentAttendance.sakit || 0;
+                            const i = studentAttendance.izin || 0;
+                            const a = studentAttendance.alpha || 0;
+                            const total = h + s + i + a;
+                            const rate = total > 0 ? Math.round((h / total) * 100) : 0;
+                            return `${h} Sesi | ${rate}% Kehadiran`;
+                          })()}
                         </p>
                       </div>
                     </div>
@@ -1235,19 +1293,27 @@ export default function SiswaPage() {
                         <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-center">
                           <div className="bg-white border border-zinc-200 rounded-lg p-2 flex flex-col justify-center shadow-2xs">
                             <span className="text-[9px] text-zinc-400 font-bold block uppercase tracking-wider">Hadir</span>
-                            <span className="text-xs font-extrabold text-emerald-600 mt-1 block">{hadir} Hari</span>
+                            <span className="text-xs font-extrabold text-emerald-600 mt-1 block">
+                              {hadir} Hari <span className="text-[10px] text-zinc-400 font-medium font-mono">({Math.round((hadir / ((hadir + sakit + izin + alpha) || 1)) * 100)}%)</span>
+                            </span>
                           </div>
                           <div className="bg-white border border-zinc-200 rounded-lg p-2 flex flex-col justify-center shadow-2xs">
                             <span className="text-[9px] text-zinc-400 font-bold block uppercase tracking-wider">Sakit</span>
-                            <span className="text-xs font-extrabold text-amber-500 mt-1 block">{sakit} Hari</span>
+                            <span className="text-xs font-extrabold text-amber-500 mt-1 block">
+                              {sakit} Hari <span className="text-[10px] text-zinc-400 font-medium font-mono">({Math.round((sakit / ((hadir + sakit + izin + alpha) || 1)) * 100)}%)</span>
+                            </span>
                           </div>
                           <div className="bg-white border border-zinc-200 rounded-lg p-2 flex flex-col justify-center shadow-2xs">
                             <span className="text-[9px] text-zinc-400 font-bold block uppercase tracking-wider">Izin</span>
-                            <span className="text-xs font-extrabold text-strong-blue mt-1 block">{izin} Hari</span>
+                            <span className="text-xs font-extrabold text-strong-blue mt-1 block">
+                              {izin} Hari <span className="text-[10px] text-zinc-400 font-medium font-mono">({Math.round((izin / ((hadir + sakit + izin + alpha) || 1)) * 100)}%)</span>
+                            </span>
                           </div>
                           <div className="bg-white border border-zinc-200 rounded-lg p-2 flex flex-col justify-center shadow-2xs">
                             <span className="text-[9px] text-zinc-400 font-bold block uppercase tracking-wider">Alpa</span>
-                            <span className="text-xs font-extrabold text-red-500 mt-1 block">{alpha} Hari</span>
+                            <span className="text-xs font-extrabold text-red-500 mt-1 block">
+                              {alpha} Hari <span className="text-[10px] text-zinc-400 font-medium font-mono">({Math.round((alpha / ((hadir + sakit + izin + alpha) || 1)) * 100)}%)</span>
+                            </span>
                           </div>
                           <div className="bg-white border border-zinc-200 rounded-lg p-2 flex flex-col justify-center shadow-2xs col-span-2 sm:col-span-1 bg-zinc-50 border-dashed">
                             <span className="text-[9px] text-zinc-400 font-bold block uppercase tracking-wider">Total</span>
@@ -1605,9 +1671,10 @@ export default function SiswaPage() {
                   <select
                     value={formKelasId}
                     onChange={(e) => setFormKelasId(e.target.value)}
+                    required
                     className="w-full bg-white border border-zinc-300 rounded-lg px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:border-strong-blue focus:ring-1 focus:ring-strong-blue"
                   >
-                    <option value="">-- Pilih Kelas (Opsional) --</option>
+                    <option value="">-- Pilih Kelas --</option>
                     {classes.map((cls) => (
                       <option key={cls.id} value={cls.id}>{cls.nama_kelas}</option>
                     ))}
@@ -1685,7 +1752,7 @@ export default function SiswaPage() {
                   {formFile ? (
                     <span className="text-xs text-strong-blue font-bold truncate max-w-xs">{formFile.name}</span>
                   ) : formFileUrl ? (
-                    <span className="text-xs text-emerald-600 font-bold">Foto sudah diunggah</span>
+                    null
                   ) : (
                     <span className="text-xs text-zinc-400">Belum ada foto terpilih</span>
                   )}
@@ -1754,9 +1821,55 @@ export default function SiswaPage() {
                 <h3 className="font-bold text-zinc-900 text-sm flex items-center gap-1.5">
                   <Clock size={16} className="text-strong-blue" /> Atur Kehadiran
                 </h3>
-                <p className="text-[10px] text-zinc-500 font-bold uppercase mt-0.5">
-                  {new Date().toLocaleString("id-ID", { month: "long", year: "numeric" })}
-                </p>
+                {/* Month/Year selector navigation */}
+                <div className="flex items-center gap-1 mt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const prevMonth = calendarMonth === 0 ? 11 : calendarMonth - 1;
+                      const prevYear = calendarMonth === 0 ? calendarYear - 1 : calendarYear;
+                      handleMonthChange(prevMonth, prevYear);
+                    }}
+                    className="p-1 hover:bg-zinc-200 text-zinc-600 rounded-md cursor-pointer transition-colors"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                  </button>
+                  
+                  <select
+                    value={calendarMonth}
+                    onChange={(e) => handleMonthChange(Number(e.target.value), calendarYear)}
+                    className="bg-white border border-zinc-300 text-zinc-700 font-extrabold uppercase text-[10px] focus:outline-none cursor-pointer rounded px-1.5 py-0.5"
+                  >
+                    {[
+                      "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+                      "Juli", "Agustus", "September", "Oktober", "November", "Desember"
+                    ].map((m, idx) => (
+                      <option key={idx} value={idx}>{m}</option>
+                    ))}
+                  </select>
+
+                  <select
+                    value={calendarYear}
+                    onChange={(e) => handleMonthChange(calendarMonth, Number(e.target.value))}
+                    className="bg-white border border-zinc-300 text-zinc-700 font-extrabold uppercase text-[10px] focus:outline-none cursor-pointer rounded px-1.5 py-0.5"
+                  >
+                    {[calendarYear - 2, calendarYear - 1, calendarYear, calendarYear + 1, calendarYear + 2].map((y) => (
+                      <option key={y} value={y}>{y}</option>
+                    ))}
+                  </select>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const nextMonth = calendarMonth === 11 ? 0 : calendarMonth + 1;
+                      const nextYear = calendarMonth === 11 ? calendarYear + 1 : calendarYear;
+                      handleMonthChange(nextMonth, nextYear);
+                    }}
+                    className="p-1 hover:bg-zinc-200 text-zinc-600 rounded-md cursor-pointer transition-colors"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+                  </button>
+                </div>
               </div>
               <button 
                 onClick={() => setShowCalendarModal(false)}
@@ -1768,7 +1881,7 @@ export default function SiswaPage() {
 
             <div className="p-4 space-y-4">
               <p className="text-[10px] text-zinc-400 font-medium text-center bg-zinc-50 border border-zinc-200/60 p-2 rounded-lg leading-relaxed">
-                💡 Pilih kategori kehadiran di sebelah kanan, lalu klik tanggal pada kalender di bawah untuk menerapkannya.
+                💡 Pilih kategori kehadiran di sebelah kanan, lalu klik tanggal pada kalender di bawah untuk menerapkannya. Tanggal hari esok/mendatang terkunci secara otomatis.
               </p>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
@@ -1788,7 +1901,7 @@ export default function SiswaPage() {
                   {/* Calendar Grid cells */}
                   <div className="grid grid-cols-7 gap-1.5 justify-items-center">
                     {/* Blank days index offset */}
-                    {Array.from({ length: new Date(new Date().getFullYear(), new Date().getMonth(), 1).getDay() }).map((_, idx) => (
+                    {Array.from({ length: new Date(calendarYear, calendarMonth, 1).getDay() }).map((_, idx) => (
                       <div key={`offset-${idx}`} className="w-9 h-9"></div>
                     ))}
 
@@ -1796,6 +1909,14 @@ export default function SiswaPage() {
                     {Object.keys(calendarDays).map((dayStr) => {
                       const dayNum = Number(dayStr);
                       const status = calendarDays[dayNum];
+                      
+                      // Calculate today highlight and future disabling
+                      const cellDate = new Date(calendarYear, calendarMonth, dayNum);
+                      const systemToday = new Date();
+                      systemToday.setHours(0, 0, 0, 0);
+                      const isFuture = cellDate.getTime() > systemToday.getTime();
+                      const isToday = systemToday.getDate() === dayNum && systemToday.getMonth() === calendarMonth && systemToday.getFullYear() === calendarYear;
+
                       const statusColors = {
                         H: "bg-emerald-500 text-white hover:bg-emerald-600 shadow-xs border border-emerald-500",
                         S: "bg-amber-500 text-white hover:bg-amber-600 shadow-xs border border-amber-500",
@@ -1803,15 +1924,24 @@ export default function SiswaPage() {
                         A: "bg-red-500 text-white hover:bg-red-600 shadow-xs border border-red-500",
                         N: "bg-zinc-50 hover:bg-zinc-100 text-zinc-400 border border-zinc-200"
                       };
+
                       return (
                         <button
                           key={`day-${dayNum}`}
                           type="button"
+                          disabled={isFuture}
                           onClick={() => clickDay(dayNum)}
-                          className={`w-9 h-9 rounded-lg font-bold text-xs flex flex-col items-center justify-center transition-all cursor-pointer select-none active:scale-90 ${statusColors[status]}`}
+                          className={`w-9 h-9 rounded-lg font-bold text-xs flex flex-col items-center justify-center transition-all cursor-pointer select-none active:scale-90 relative ${
+                            isFuture ? "opacity-25 cursor-not-allowed pointer-events-none" : ""
+                          } ${
+                            isToday ? "ring-2 ring-mustard border-mustard" : ""
+                          } ${statusColors[status]}`}
                         >
                           <span>{dayNum}</span>
                           <span className="text-[6px] opacity-75 leading-none mt-0.5">{status === "N" ? "-" : status}</span>
+                          {isToday && (
+                            <span className="absolute -top-1 -right-1 w-2 h-2 bg-mustard rounded-full ring-1 ring-white shadow-xs" title="Hari Ini" />
+                          )}
                         </button>
                       );
                     })}
@@ -1819,71 +1949,81 @@ export default function SiswaPage() {
                 </div>
 
                 {/* Right Area: Category Selector Brush */}
-                <div className="md:col-span-1 border-t md:border-t-0 md:border-l border-zinc-200 pt-4 md:pt-0 md:pl-5 flex flex-col justify-start space-y-2.5">
+                <div className="md:col-span-1 border-t md:border-t-0 md:border-l border-zinc-200 pt-4 md:pt-0 md:pl-5 flex flex-col justify-start space-y-2">
                   <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block mb-1">Pilih Kategori</span>
                   
                   <button
                     type="button"
                     onClick={() => setActiveCategory("H")}
-                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer select-none border ${
+                    className={`w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer select-none border ${
                       activeCategory === "H" 
-                        ? "bg-emerald-500 text-white border-emerald-500 shadow-xs ring-2 ring-emerald-500/30" 
-                        : "bg-emerald-500/10 text-emerald-600 border-emerald-300/40 hover:bg-emerald-500/20"
+                        ? "bg-emerald-50 text-emerald-700 border-emerald-500 shadow-xs ring-2 ring-emerald-500/25" 
+                        : "bg-white text-zinc-500 border-zinc-200 hover:bg-zinc-50"
                     }`}
                   >
-                    <span>Hadir</span>
+                    <span className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 block" /> Hadir
+                    </span>
                     <span className="text-[10px] opacity-80">(H)</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setActiveCategory("S")}
-                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer select-none border ${
+                    className={`w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer select-none border ${
                       activeCategory === "S" 
-                        ? "bg-amber-500 text-white border-amber-500 shadow-xs ring-2 ring-amber-500/30" 
-                        : "bg-amber-500/10 text-amber-600 border-amber-300/40 hover:bg-amber-500/20"
+                        ? "bg-amber-50 text-amber-700 border-amber-500 shadow-xs ring-2 ring-amber-500/25" 
+                        : "bg-white text-zinc-500 border-zinc-200 hover:bg-zinc-50"
                     }`}
                   >
-                    <span>Sakit</span>
+                    <span className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-amber-500 block" /> Sakit
+                    </span>
                     <span className="text-[10px] opacity-80">(S)</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setActiveCategory("I")}
-                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer select-none border ${
+                    className={`w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer select-none border ${
                       activeCategory === "I" 
-                        ? "bg-strong-blue text-white border-strong-blue shadow-xs ring-2 ring-strong-blue/30" 
-                        : "bg-strong-blue/10 text-strong-blue border-strong-blue/30 hover:bg-strong-blue/20"
+                        ? "bg-blue-50 text-strong-blue border-strong-blue shadow-xs ring-2 ring-strong-blue/25" 
+                        : "bg-white text-zinc-500 border-zinc-200 hover:bg-zinc-50"
                     }`}
                   >
-                    <span>Izin</span>
+                    <span className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-strong-blue block" /> Izin
+                    </span>
                     <span className="text-[10px] opacity-80">(I)</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setActiveCategory("A")}
-                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer select-none border ${
+                    className={`w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer select-none border ${
                       activeCategory === "A" 
-                        ? "bg-red-500 text-white border-red-500 shadow-xs ring-2 ring-red-500/30" 
-                        : "bg-red-500/10 text-red-600 border-red-300/40 hover:bg-red-500/20"
+                        ? "bg-red-50 text-red-700 border-red-500 shadow-xs ring-2 ring-red-500/25" 
+                        : "bg-white text-zinc-500 border-zinc-200 hover:bg-zinc-50"
                     }`}
                   >
-                    <span>Alpa</span>
+                    <span className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-red-500 block" /> Alpa
+                    </span>
                     <span className="text-[10px] opacity-80">(A)</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setActiveCategory("N")}
-                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer select-none border ${
+                    className={`w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer select-none border ${
                       activeCategory === "N" 
-                        ? "bg-zinc-500 text-white border-zinc-500 shadow-xs ring-2 ring-zinc-500/30" 
-                        : "bg-zinc-100 text-zinc-600 border-zinc-300 hover:bg-zinc-200"
+                        ? "bg-zinc-100 text-zinc-800 border-zinc-500 shadow-xs ring-2 ring-zinc-500/25" 
+                        : "bg-white text-zinc-500 border-zinc-200 hover:bg-zinc-50"
                     }`}
                   >
-                    <span>Kosongkan</span>
+                    <span className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-zinc-400 block" /> Kosongkan
+                    </span>
                     <span className="text-[10px] opacity-80">(-)</span>
                   </button>
                 </div>
@@ -1893,10 +2033,10 @@ export default function SiswaPage() {
             {/* Footer with calculated live aggregates */}
             <div className="p-4 border-t border-zinc-200 bg-zinc-50 space-y-3">
               <div className="flex items-center justify-between text-[10px] font-extrabold text-zinc-600 bg-white border border-zinc-200 p-2 rounded-lg">
-                <span className="text-emerald-600">H: {getCalendarAggregates().hadir}</span>
-                <span className="text-amber-500">S: {getCalendarAggregates().sakit}</span>
-                <span className="text-strong-blue">I: {getCalendarAggregates().izin}</span>
-                <span className="text-red-500">A: {getCalendarAggregates().alpha}</span>
+                <span className="text-emerald-600">H: {getCalendarAggregates().hadir} ({Math.round((getCalendarAggregates().hadir / (getCalendarAggregates().total || 1)) * 100)}%)</span>
+                <span className="text-amber-500">S: {getCalendarAggregates().sakit} ({Math.round((getCalendarAggregates().sakit / (getCalendarAggregates().total || 1)) * 100)}%)</span>
+                <span className="text-strong-blue">I: {getCalendarAggregates().izin} ({Math.round((getCalendarAggregates().izin / (getCalendarAggregates().total || 1)) * 100)}%)</span>
+                <span className="text-red-500">A: {getCalendarAggregates().alpha} ({Math.round((getCalendarAggregates().alpha / (getCalendarAggregates().total || 1)) * 100)}%)</span>
                 <span className="text-zinc-800 border-l border-zinc-200 pl-2">Total: {getCalendarAggregates().total} Hari</span>
               </div>
 
@@ -1916,6 +2056,42 @@ export default function SiswaPage() {
                   Terapkan
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Konfirmasi Hapus Siswa */}
+      {confirmDeleteStudent && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+          <div className="bg-white border border-zinc-200 rounded-xl w-full max-w-sm shadow-2xl overflow-hidden animate-scale-up">
+            <div className="p-5 border-b border-zinc-200 bg-zinc-50 flex items-center gap-2">
+              <AlertCircle className="text-red-500" size={18} />
+              <h3 className="font-extrabold text-zinc-900 text-sm">Konfirmasi Hapus Siswa</h3>
+            </div>
+            <div className="p-5 space-y-3">
+              <p className="text-xs text-zinc-600 leading-relaxed font-medium">
+                Apakah Anda yakin ingin menghapus data siswa <strong className="text-zinc-900">{confirmDeleteStudent.nama_lengkap}</strong>?
+              </p>
+              <p className="text-[11px] text-zinc-400 font-medium">
+                Tindakan ini bersifat permanen. Semua nilai, absensi, dan data akademik yang terhubung dengan siswa ini di dalam database juga akan dihapus sepenuhnya.
+              </p>
+            </div>
+            <div className="p-4 bg-zinc-50 border-t border-zinc-200 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setConfirmDeleteStudent(null)}
+                className="px-3.5 py-2 hover:bg-zinc-200 text-zinc-500 hover:text-zinc-800 rounded-lg text-xs font-bold transition-all cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={() => executeDeleteStudent(confirmDeleteStudent.id)}
+                className="px-3.5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold transition-all shadow-md cursor-pointer"
+              >
+                Hapus
+              </button>
             </div>
           </div>
         </div>

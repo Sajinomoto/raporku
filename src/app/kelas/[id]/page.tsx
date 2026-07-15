@@ -22,7 +22,10 @@ import {
   Clock,
   Save,
   AlertCircle,
-  CheckCircle2
+  CheckCircle2,
+  MoreVertical,
+  GraduationCap,
+  Shuffle
 } from "lucide-react";
 
 interface Kelas {
@@ -84,6 +87,16 @@ export default function ClassDetailPage({ params }: { params: Promise<{ id: stri
   const [showCalendarModal, setShowCalendarModal] = useState(false);
   const [calendarDays, setCalendarDays] = useState<Record<number, "H" | "S" | "I" | "A" | "N">>({});
   const [activeCategory, setActiveCategory] = useState<"H" | "S" | "I" | "A" | "N">("H");
+  const [calendarYear, setCalendarYear] = useState<number>(new Date().getFullYear());
+  const [calendarMonth, setCalendarMonth] = useState<number>(new Date().getMonth());
+  const [sortBy, setSortBy] = useState<"nama" | "nilai" | "kehadiran">("nama");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+  const [activeDropdownStudentId, setActiveDropdownStudentId] = useState<string | null>(null);
+  const [classList, setClassList] = useState<Kelas[]>([]);
+  const [confirmRemoveStudent, setConfirmRemoveStudent] = useState<Siswa | null>(null);
+  const [confirmMoveStudent, setConfirmMoveStudent] = useState<Siswa | null>(null);
+  const [targetClassId, setTargetClassId] = useState<string>("");
+  const [confirmGraduateStudent, setConfirmGraduateStudent] = useState<Siswa | null>(null);
 
   // Statistics states
   const [classAverage, setClassAverage] = useState<number>(0);
@@ -94,6 +107,7 @@ export default function ClassDetailPage({ params }: { params: Promise<{ id: stri
       fetchClassData();
       fetchClassDetails();
       fetchSubjects();
+      fetchClassList();
     }
   }, [classId]);
 
@@ -106,6 +120,18 @@ export default function ClassDetailPage({ params }: { params: Promise<{ id: stri
       setSubjects(data || []);
     } catch (err) {
       console.error("Error fetching subjects:", err);
+    }
+  };
+
+  const fetchClassList = async () => {
+    try {
+      const { data } = await supabase
+        .from("kelas")
+        .select("*")
+        .order("nama_kelas");
+      setClassList(data || []);
+    } catch (err) {
+      console.error("Error fetching class list:", err);
     }
   };
 
@@ -292,8 +318,11 @@ export default function ClassDetailPage({ params }: { params: Promise<{ id: stri
     const now = new Date();
     const year = now.getFullYear();
     const month = now.getMonth();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    
+    setCalendarYear(year);
+    setCalendarMonth(month);
 
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
     const initialDays: Record<number, "H" | "S" | "I" | "A" | "N"> = {};
     
     let hLeft = hadir;
@@ -322,6 +351,39 @@ export default function ClassDetailPage({ params }: { params: Promise<{ id: stri
     setCalendarDays(initialDays);
     setActiveCategory("H");
     setShowCalendarModal(true);
+  };
+
+  const handleMonthChange = (newMonth: number, newYear: number) => {
+    const aggs = getCalendarAggregates();
+    setCalendarMonth(newMonth);
+    setCalendarYear(newYear);
+
+    const daysInMonth = new Date(newYear, newMonth + 1, 0).getDate();
+    const initialDays: Record<number, "H" | "S" | "I" | "A" | "N"> = {};
+    let hLeft = aggs.hadir;
+    let sLeft = aggs.sakit;
+    let iLeft = aggs.izin;
+    let aLeft = aggs.alpha;
+
+    for (let d = 1; d <= daysInMonth; d++) {
+      if (hLeft > 0) {
+        initialDays[d] = "H";
+        hLeft--;
+      } else if (sLeft > 0) {
+        initialDays[d] = "S";
+        sLeft--;
+      } else if (iLeft > 0) {
+        initialDays[d] = "I";
+        iLeft--;
+      } else if (aLeft > 0) {
+        initialDays[d] = "A";
+        aLeft--;
+      } else {
+        initialDays[d] = "N";
+      }
+    }
+
+    setCalendarDays(initialDays);
   };
 
   const clickDay = (dayNum: number) => {
@@ -353,6 +415,15 @@ export default function ClassDetailPage({ params }: { params: Promise<{ id: stri
     setIzen(aggs.izin);
     setAlpha(aggs.alpha);
     setShowCalendarModal(false);
+  };
+
+  const handleSort = (criteria: "nama" | "nilai" | "kehadiran") => {
+    if (sortBy === criteria) {
+      setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortBy(criteria);
+      setSortOrder(criteria === "nama" ? "asc" : "desc");
+    }
   };
 
   const fetchClassData = async () => {
@@ -508,9 +579,7 @@ export default function ClassDetailPage({ params }: { params: Promise<{ id: stri
     }
   };
 
-  const handleRemoveStudent = async (studentId: string) => {
-    if (!confirm("Apakah Anda yakin ingin mengeluarkan siswa ini dari kelas?")) return;
-
+  const executeRemoveStudent = async (studentId: string) => {
     try {
       const { error } = await supabase
         .from("siswa")
@@ -518,9 +587,42 @@ export default function ClassDetailPage({ params }: { params: Promise<{ id: stri
         .eq("id", studentId);
 
       if (error) throw error;
+      setConfirmRemoveStudent(null);
       fetchClassDetails();
     } catch (err) {
       console.error("Error removing student:", err);
+    }
+  };
+
+  const executeMoveStudent = async (studentId: string, destClassId: string) => {
+    if (!destClassId) return;
+    try {
+      const { error } = await supabase
+        .from("siswa")
+        .update({ kelas_id: destClassId })
+        .eq("id", studentId);
+
+      if (error) throw error;
+      setConfirmMoveStudent(null);
+      setTargetClassId("");
+      fetchClassDetails();
+    } catch (err) {
+      console.error("Error moving student:", err);
+    }
+  };
+
+  const executeGraduateStudent = async (studentId: string) => {
+    try {
+      const { error } = await supabase
+        .from("siswa")
+        .update({ kelas_id: null })
+        .eq("id", studentId);
+
+      if (error) throw error;
+      setConfirmGraduateStudent(null);
+      fetchClassDetails();
+    } catch (err) {
+      console.error("Error graduating student:", err);
     }
   };
 
@@ -578,9 +680,20 @@ export default function ClassDetailPage({ params }: { params: Promise<{ id: stri
       ) : (
         <div className="space-y-6">
           
-          {/* Top Row: Statistics */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Card 1: Rata-Rata Kelas */}
+           {/* Top Row: Statistics */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Card 1: Jumlah Siswa */}
+            <div className="bg-white border border-zinc-200 rounded-xl p-5 flex items-center gap-4 shadow-xs min-h-[110px]">
+              <div className="p-3.5 bg-mustard/10 text-[#D49B00] rounded-xl shrink-0">
+                <Users size={24} />
+              </div>
+              <div>
+                <span className="text-[10px] text-zinc-500 font-bold uppercase tracking-wider block">Jumlah Siswa</span>
+                <p className="text-2xl font-black text-[#D49B00] mt-0.5">{students.length} Siswa</p>
+              </div>
+            </div>
+
+            {/* Card 2: Rata-Rata Kelas */}
             <div className="bg-white border border-zinc-200 rounded-xl p-5 flex items-center gap-4 shadow-xs min-h-[110px]">
               <div className="p-3.5 bg-strong-blue/10 text-strong-blue rounded-xl shrink-0">
                 <Award size={24} />
@@ -591,7 +704,7 @@ export default function ClassDetailPage({ params }: { params: Promise<{ id: stri
               </div>
             </div>
             
-            {/* Card 2: Kehadiran Kelas */}
+            {/* Card 3: Kehadiran Kelas */}
             <div className="bg-white border border-zinc-200 rounded-xl p-5 flex items-center gap-4 shadow-xs min-h-[110px]">
               <div className="p-3.5 bg-emerald-500/10 text-emerald-600 rounded-xl shrink-0">
                 <TrendingUp size={24} />
@@ -606,7 +719,7 @@ export default function ClassDetailPage({ params }: { params: Promise<{ id: stri
           {/* Bottom Row: Student List (Full Width) */}
           <div className="bg-white border border-zinc-200 rounded-xl p-6 space-y-4 shadow-xs">
             <h4 className="font-extrabold text-strong-blue text-sm flex items-center gap-2 border-b border-zinc-100 pb-3">
-              <Users size={16} /> Anggota Kelas ({students.length} Siswa)
+              <Users size={16} /> Anggota Kelas
             </h4>
 
             {students.length === 0 ? (
@@ -614,21 +727,71 @@ export default function ClassDetailPage({ params }: { params: Promise<{ id: stri
                 Tidak ada siswa terdaftar di kelas ini.
               </div>
             ) : (
-              <div className="border border-zinc-200 rounded-xl overflow-hidden bg-white shadow-xs">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs text-zinc-600">
-                    <thead className="bg-zinc-100 text-zinc-700 font-bold border-b border-zinc-200">
-                      <tr>
-                        <th className="px-4 py-3">Nama Siswa</th>
-                        <th className="px-4 py-3">NIS</th>
-                        <th className="px-4 py-3">Rata-rata Nilai</th>
-                        <th className="px-4 py-3">Kehadiran</th>
-                        <th className="px-4 py-3 text-right">Aksi</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-zinc-200">
-                      {students.map((student) => (
+              <div className="border border-zinc-200 rounded-xl bg-white shadow-xs">
+                <table className="w-full text-left text-xs text-zinc-600">
+                  <thead className="bg-zinc-100 text-zinc-700 font-bold border-b border-zinc-200">
+                    <tr>
+                      <th className="px-4 py-3 w-12 text-center text-zinc-400 font-bold rounded-tl-xl">No</th>
+                      <th className="px-4 py-3">
+                        <button
+                          type="button"
+                          onClick={() => handleSort("nama")}
+                          className="hover:text-strong-blue inline-flex items-center gap-1 cursor-pointer font-bold focus:outline-none"
+                        >
+                          Nama Siswa
+                          <span className="text-[10px] text-zinc-400">
+                            {sortBy === "nama" ? (sortOrder === "asc" ? "▲" : "▼") : "⇅"}
+                          </span>
+                        </button>
+                      </th>
+                      <th className="px-4 py-3">NIS</th>
+                      <th className="px-4 py-3">
+                        <button
+                          type="button"
+                          onClick={() => handleSort("nilai")}
+                          className="hover:text-strong-blue inline-flex items-center gap-1 cursor-pointer font-bold focus:outline-none"
+                        >
+                          Rata-rata Nilai
+                          <span className="text-[10px] text-zinc-400">
+                            {sortBy === "nilai" ? (sortOrder === "asc" ? "▲" : "▼") : "⇅"}
+                          </span>
+                        </button>
+                      </th>
+                      <th className="px-4 py-3">
+                        <button
+                          type="button"
+                          onClick={() => handleSort("kehadiran")}
+                          className="hover:text-strong-blue inline-flex items-center gap-1 cursor-pointer font-bold focus:outline-none"
+                        >
+                          Kehadiran
+                          <span className="text-[10px] text-zinc-400">
+                            {sortBy === "kehadiran" ? (sortOrder === "asc" ? "▲" : "▼") : "⇅"}
+                          </span>
+                        </button>
+                      </th>
+                      <th className="px-4 py-3 text-right rounded-tr-xl">Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-zinc-200">
+                    {(() => {
+                      const sortedList = [...students].sort((a, b) => {
+                        let comparison = 0;
+                        if (sortBy === "nama") {
+                          comparison = a.nama_lengkap.localeCompare(b.nama_lengkap);
+                        } else if (sortBy === "nilai") {
+                          const scoreA = a.averageScore || 0;
+                          const scoreB = b.averageScore || 0;
+                          comparison = scoreA - scoreB;
+                        } else if (sortBy === "kehadiran") {
+                          const attA = a.attendanceRate || 0;
+                          const attB = b.attendanceRate || 0;
+                          comparison = attA - attB;
+                        }
+                        return sortOrder === "asc" ? comparison : -comparison;
+                      });
+                      return sortedList.map((student, idx) => (
                         <tr key={student.id} className="hover:bg-zinc-50">
+                          <td className="px-4 py-3 text-center font-bold text-zinc-400">{idx + 1}</td>
                           <td className="px-4 py-3 font-semibold text-zinc-900">{student.nama_lengkap}</td>
                           <td className="px-4 py-3 text-zinc-500 font-medium">{student.nis}</td>
                           <td className="px-4 py-3">
@@ -651,28 +814,81 @@ export default function ClassDetailPage({ params }: { params: Promise<{ id: stri
                             </span>
                           </td>
                           <td className="px-4 py-3 text-right">
-                            <div className="flex justify-end gap-1.5">
+                            <div className="relative inline-block text-left">
                               <button
-                                onClick={() => openInputModal(student)}
-                                className="p-1 text-zinc-400 hover:text-mustard rounded hover:bg-mustard/15 cursor-pointer"
-                                title="Input Nilai & Absen"
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setActiveDropdownStudentId(
+                                    activeDropdownStudentId === student.id ? null : student.id
+                                  );
+                                }}
+                                className="p-1 hover:bg-zinc-100 text-zinc-400 hover:text-zinc-800 rounded-lg cursor-pointer transition-colors"
                               >
-                                <ClipboardCheck size={14} />
+                                <MoreVertical size={16} />
                               </button>
-                              <button
-                                onClick={() => handleRemoveStudent(student.id)}
-                                className="p-1 text-zinc-400 hover:text-red-500 rounded hover:bg-red-500/10 cursor-pointer"
-                                title="Keluarkan dari Kelas"
-                              >
-                                <UserMinus size={14} />
-                              </button>
+
+                              {activeDropdownStudentId === student.id && (
+                                <>
+                                  <div 
+                                    className="fixed inset-0 z-10" 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setActiveDropdownStudentId(null);
+                                    }}
+                                  />
+                                  <div className="absolute right-0 top-full mt-1 bg-white border border-zinc-200 rounded-lg shadow-lg z-20 py-1.5 w-44 animate-scale-up text-left">
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setActiveDropdownStudentId(null);
+                                        openInputModal(student);
+                                      }}
+                                      className="w-full flex items-center gap-2 px-3 py-2 text-xs text-zinc-700 hover:bg-zinc-50 cursor-pointer font-bold"
+                                    >
+                                      <ClipboardCheck size={14} className="text-mustard" /> Input Nilai & Absen
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setActiveDropdownStudentId(null);
+                                        setConfirmMoveStudent(student);
+                                        setTargetClassId("");
+                                      }}
+                                      className="w-full flex items-center gap-2 px-3 py-2 text-xs text-zinc-700 hover:bg-zinc-50 cursor-pointer font-bold border-t border-zinc-100"
+                                    >
+                                      <Shuffle size={14} className="text-strong-blue" /> Pindahkan Kelas
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setActiveDropdownStudentId(null);
+                                        setConfirmGraduateStudent(student);
+                                      }}
+                                      className="w-full flex items-center gap-2 px-3 py-2 text-xs text-emerald-600 hover:bg-emerald-50 cursor-pointer font-bold border-t border-zinc-100"
+                                    >
+                                      <GraduationCap size={14} /> Luluskan Siswa
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setActiveDropdownStudentId(null);
+                                        setConfirmRemoveStudent(student);
+                                      }}
+                                      className="w-full flex items-center gap-2 px-3 py-2 text-xs text-red-600 hover:bg-red-50 cursor-pointer font-bold border-t border-zinc-100"
+                                    >
+                                      <UserMinus size={14} /> Keluarkan dari Kelas
+                                    </button>
+                                  </div>
+                                </>
+                              )}
                             </div>
                           </td>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      ));
+                    })()}
+                  </tbody>
+                </table>
               </div>
             )}
           </div>
@@ -837,19 +1053,27 @@ export default function ClassDetailPage({ params }: { params: Promise<{ id: stri
                   <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-center">
                     <div className="bg-white border border-zinc-200 rounded-lg p-2 flex flex-col justify-center shadow-2xs">
                       <span className="text-[9px] text-zinc-400 font-bold block uppercase tracking-wider">Hadir</span>
-                      <span className="text-xs font-extrabold text-emerald-600 mt-1 block">{hadir} Hari</span>
+                      <span className="text-xs font-extrabold text-emerald-600 mt-1 block">
+                        {hadir} Hari <span className="text-[10px] text-zinc-400 font-medium font-mono">({Math.round((hadir / ((hadir + sakit + izin + alpha) || 1)) * 100)}%)</span>
+                      </span>
                     </div>
                     <div className="bg-white border border-zinc-200 rounded-lg p-2 flex flex-col justify-center shadow-2xs">
                       <span className="text-[9px] text-zinc-400 font-bold block uppercase tracking-wider">Sakit</span>
-                      <span className="text-xs font-extrabold text-amber-500 mt-1 block">{sakit} Hari</span>
+                      <span className="text-xs font-extrabold text-amber-500 mt-1 block">
+                        {sakit} Hari <span className="text-[10px] text-zinc-400 font-medium font-mono">({Math.round((sakit / ((hadir + sakit + izin + alpha) || 1)) * 100)}%)</span>
+                      </span>
                     </div>
                     <div className="bg-white border border-zinc-200 rounded-lg p-2 flex flex-col justify-center shadow-2xs">
                       <span className="text-[9px] text-zinc-400 font-bold block uppercase tracking-wider">Izin</span>
-                      <span className="text-xs font-extrabold text-strong-blue mt-1 block">{izin} Hari</span>
+                      <span className="text-xs font-extrabold text-strong-blue mt-1 block">
+                        {izin} Hari <span className="text-[10px] text-zinc-400 font-medium font-mono">({Math.round((izin / ((hadir + sakit + izin + alpha) || 1)) * 100)}%)</span>
+                      </span>
                     </div>
                     <div className="bg-white border border-zinc-200 rounded-lg p-2 flex flex-col justify-center shadow-2xs">
                       <span className="text-[9px] text-zinc-400 font-bold block uppercase tracking-wider">Alpa</span>
-                      <span className="text-xs font-extrabold text-red-500 mt-1 block">{alpha} Hari</span>
+                      <span className="text-xs font-extrabold text-red-500 mt-1 block">
+                        {alpha} Hari <span className="text-[10px] text-zinc-400 font-medium font-mono">({Math.round((alpha / ((hadir + sakit + izin + alpha) || 1)) * 100)}%)</span>
+                      </span>
                     </div>
                     <div className="bg-white border border-zinc-200 rounded-lg p-2 flex flex-col justify-center shadow-2xs col-span-2 sm:col-span-1 bg-zinc-50 border-dashed">
                       <span className="text-[9px] text-zinc-400 font-bold block uppercase tracking-wider">Total</span>
@@ -916,9 +1140,55 @@ export default function ClassDetailPage({ params }: { params: Promise<{ id: stri
                 <h3 className="font-bold text-zinc-900 text-sm flex items-center gap-1.5">
                   <Clock size={16} className="text-strong-blue" /> Atur Kehadiran
                 </h3>
-                <p className="text-[10px] text-zinc-500 font-bold uppercase mt-0.5">
-                  {new Date().toLocaleString("id-ID", { month: "long", year: "numeric" })}
-                </p>
+                {/* Month/Year selector navigation */}
+                <div className="flex items-center gap-1 mt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const prevMonth = calendarMonth === 0 ? 11 : calendarMonth - 1;
+                      const prevYear = calendarMonth === 0 ? calendarYear - 1 : calendarYear;
+                      handleMonthChange(prevMonth, prevYear);
+                    }}
+                    className="p-1 hover:bg-zinc-200 text-zinc-600 rounded-md cursor-pointer transition-colors"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                  </button>
+                  
+                  <select
+                    value={calendarMonth}
+                    onChange={(e) => handleMonthChange(Number(e.target.value), calendarYear)}
+                    className="bg-white border border-zinc-300 text-zinc-700 font-extrabold uppercase text-[10px] focus:outline-none cursor-pointer rounded px-1.5 py-0.5"
+                  >
+                    {[
+                      "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+                      "Juli", "Agustus", "September", "Oktober", "November", "Desember"
+                    ].map((m, idx) => (
+                      <option key={idx} value={idx}>{m}</option>
+                    ))}
+                  </select>
+
+                  <select
+                    value={calendarYear}
+                    onChange={(e) => handleMonthChange(calendarMonth, Number(e.target.value))}
+                    className="bg-white border border-zinc-300 text-zinc-700 font-extrabold uppercase text-[10px] focus:outline-none cursor-pointer rounded px-1.5 py-0.5"
+                  >
+                    {[calendarYear - 2, calendarYear - 1, calendarYear, calendarYear + 1, calendarYear + 2].map((y) => (
+                      <option key={y} value={y}>{y}</option>
+                    ))}
+                  </select>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const nextMonth = calendarMonth === 11 ? 0 : calendarMonth + 1;
+                      const nextYear = calendarMonth === 11 ? calendarYear + 1 : calendarYear;
+                      handleMonthChange(nextMonth, nextYear);
+                    }}
+                    className="p-1 hover:bg-zinc-200 text-zinc-600 rounded-md cursor-pointer transition-colors"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+                  </button>
+                </div>
               </div>
               <button 
                 onClick={() => setShowCalendarModal(false)}
@@ -930,7 +1200,7 @@ export default function ClassDetailPage({ params }: { params: Promise<{ id: stri
 
             <div className="p-4 space-y-4">
               <p className="text-[10px] text-zinc-400 font-medium text-center bg-zinc-50 border border-zinc-200/60 p-2 rounded-lg leading-relaxed">
-                💡 Pilih kategori kehadiran di sebelah kanan, lalu klik tanggal pada kalender di bawah untuk menerapkannya.
+                💡 Pilih kategori kehadiran di sebelah kanan, lalu klik tanggal pada kalender di bawah untuk menerapkannya. Tanggal hari esok/mendatang terkunci secara otomatis.
               </p>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
@@ -950,7 +1220,7 @@ export default function ClassDetailPage({ params }: { params: Promise<{ id: stri
                   {/* Calendar Grid cells */}
                   <div className="grid grid-cols-7 gap-1.5 justify-items-center">
                     {/* Blank days index offset */}
-                    {Array.from({ length: new Date(new Date().getFullYear(), new Date().getMonth(), 1).getDay() }).map((_, idx) => (
+                    {Array.from({ length: new Date(calendarYear, calendarMonth, 1).getDay() }).map((_, idx) => (
                       <div key={`offset-${idx}`} className="w-9 h-9"></div>
                     ))}
 
@@ -958,6 +1228,14 @@ export default function ClassDetailPage({ params }: { params: Promise<{ id: stri
                     {Object.keys(calendarDays).map((dayStr) => {
                       const dayNum = Number(dayStr);
                       const status = calendarDays[dayNum];
+                      
+                      // Calculate today highlight and future disabling
+                      const cellDate = new Date(calendarYear, calendarMonth, dayNum);
+                      const systemToday = new Date();
+                      systemToday.setHours(0, 0, 0, 0);
+                      const isFuture = cellDate.getTime() > systemToday.getTime();
+                      const isToday = systemToday.getDate() === dayNum && systemToday.getMonth() === calendarMonth && systemToday.getFullYear() === calendarYear;
+
                       const statusColors = {
                         H: "bg-emerald-500 text-white hover:bg-emerald-600 shadow-xs border border-emerald-500",
                         S: "bg-amber-500 text-white hover:bg-amber-600 shadow-xs border border-amber-500",
@@ -965,15 +1243,24 @@ export default function ClassDetailPage({ params }: { params: Promise<{ id: stri
                         A: "bg-red-500 text-white hover:bg-red-600 shadow-xs border border-red-500",
                         N: "bg-zinc-50 hover:bg-zinc-100 text-zinc-400 border border-zinc-200"
                       };
+
                       return (
                         <button
                           key={`day-${dayNum}`}
                           type="button"
+                          disabled={isFuture}
                           onClick={() => clickDay(dayNum)}
-                          className={`w-9 h-9 rounded-lg font-bold text-xs flex flex-col items-center justify-center transition-all cursor-pointer select-none active:scale-90 ${statusColors[status]}`}
+                          className={`w-9 h-9 rounded-lg font-bold text-xs flex flex-col items-center justify-center transition-all cursor-pointer select-none active:scale-90 relative ${
+                            isFuture ? "opacity-25 cursor-not-allowed pointer-events-none" : ""
+                          } ${
+                            isToday ? "ring-2 ring-mustard border-mustard" : ""
+                          } ${statusColors[status]}`}
                         >
                           <span>{dayNum}</span>
                           <span className="text-[6px] opacity-75 leading-none mt-0.5">{status === "N" ? "-" : status}</span>
+                          {isToday && (
+                            <span className="absolute -top-1 -right-1 w-2 h-2 bg-mustard rounded-full ring-1 ring-white shadow-xs" title="Hari Ini" />
+                          )}
                         </button>
                       );
                     })}
@@ -981,71 +1268,81 @@ export default function ClassDetailPage({ params }: { params: Promise<{ id: stri
                 </div>
 
                 {/* Right Area: Category Selector Brush */}
-                <div className="md:col-span-1 border-t md:border-t-0 md:border-l border-zinc-200 pt-4 md:pt-0 md:pl-5 flex flex-col justify-start space-y-2.5">
+                <div className="md:col-span-1 border-t md:border-t-0 md:border-l border-zinc-200 pt-4 md:pt-0 md:pl-5 flex flex-col justify-start space-y-2">
                   <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block mb-1">Pilih Kategori</span>
                   
                   <button
                     type="button"
                     onClick={() => setActiveCategory("H")}
-                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer select-none border ${
+                    className={`w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer select-none border ${
                       activeCategory === "H" 
-                        ? "bg-emerald-500 text-white border-emerald-500 shadow-xs ring-2 ring-emerald-500/30" 
-                        : "bg-emerald-500/10 text-emerald-600 border-emerald-300/40 hover:bg-emerald-500/20"
+                        ? "bg-emerald-50 text-emerald-700 border-emerald-500 shadow-xs ring-2 ring-emerald-500/25" 
+                        : "bg-white text-zinc-500 border-zinc-200 hover:bg-zinc-50"
                     }`}
                   >
-                    <span>Hadir</span>
+                    <span className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 block" /> Hadir
+                    </span>
                     <span className="text-[10px] opacity-80">(H)</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setActiveCategory("S")}
-                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer select-none border ${
+                    className={`w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer select-none border ${
                       activeCategory === "S" 
-                        ? "bg-amber-500 text-white border-amber-500 shadow-xs ring-2 ring-amber-500/30" 
-                        : "bg-amber-500/10 text-amber-600 border-amber-300/40 hover:bg-amber-500/20"
+                        ? "bg-amber-50 text-amber-700 border-amber-500 shadow-xs ring-2 ring-amber-500/25" 
+                        : "bg-white text-zinc-500 border-zinc-200 hover:bg-zinc-50"
                     }`}
                   >
-                    <span>Sakit</span>
+                    <span className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-amber-500 block" /> Sakit
+                    </span>
                     <span className="text-[10px] opacity-80">(S)</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setActiveCategory("I")}
-                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer select-none border ${
+                    className={`w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer select-none border ${
                       activeCategory === "I" 
-                        ? "bg-strong-blue text-white border-strong-blue shadow-xs ring-2 ring-strong-blue/30" 
-                        : "bg-strong-blue/10 text-strong-blue border-strong-blue/30 hover:bg-strong-blue/20"
+                        ? "bg-blue-50 text-strong-blue border-strong-blue shadow-xs ring-2 ring-strong-blue/25" 
+                        : "bg-white text-zinc-500 border-zinc-200 hover:bg-zinc-50"
                     }`}
                   >
-                    <span>Izin</span>
+                    <span className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-strong-blue block" /> Izin
+                    </span>
                     <span className="text-[10px] opacity-80">(I)</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setActiveCategory("A")}
-                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer select-none border ${
+                    className={`w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer select-none border ${
                       activeCategory === "A" 
-                        ? "bg-red-500 text-white border-red-500 shadow-xs ring-2 ring-red-500/30" 
-                        : "bg-red-500/10 text-red-600 border-red-300/40 hover:bg-red-500/20"
+                        ? "bg-red-50 text-red-700 border-red-500 shadow-xs ring-2 ring-red-500/25" 
+                        : "bg-white text-zinc-500 border-zinc-200 hover:bg-zinc-50"
                     }`}
                   >
-                    <span>Alpa</span>
+                    <span className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-red-500 block" /> Alpa
+                    </span>
                     <span className="text-[10px] opacity-80">(A)</span>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setActiveCategory("N")}
-                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer select-none border ${
+                    className={`w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer select-none border ${
                       activeCategory === "N" 
-                        ? "bg-zinc-500 text-white border-zinc-500 shadow-xs ring-2 ring-zinc-500/30" 
-                        : "bg-zinc-100 text-zinc-600 border-zinc-300 hover:bg-zinc-200"
+                        ? "bg-zinc-100 text-zinc-800 border-zinc-500 shadow-xs ring-2 ring-zinc-500/25" 
+                        : "bg-white text-zinc-500 border-zinc-200 hover:bg-zinc-50"
                     }`}
                   >
-                    <span>Kosongkan</span>
+                    <span className="flex items-center gap-2">
+                      <span className="w-2.5 h-2.5 rounded-full bg-zinc-400 block" /> Kosongkan
+                    </span>
                     <span className="text-[10px] opacity-80">(-)</span>
                   </button>
                 </div>
@@ -1055,10 +1352,10 @@ export default function ClassDetailPage({ params }: { params: Promise<{ id: stri
             {/* Footer with calculated live aggregates */}
             <div className="p-4 border-t border-zinc-200 bg-zinc-50 space-y-3">
               <div className="flex items-center justify-between text-[10px] font-extrabold text-zinc-600 bg-white border border-zinc-200 p-2 rounded-lg">
-                <span className="text-emerald-600">H: {getCalendarAggregates().hadir}</span>
-                <span className="text-amber-500">S: {getCalendarAggregates().sakit}</span>
-                <span className="text-strong-blue">I: {getCalendarAggregates().izin}</span>
-                <span className="text-red-500">A: {getCalendarAggregates().alpha}</span>
+                <span className="text-emerald-600">H: {getCalendarAggregates().hadir} ({Math.round((getCalendarAggregates().hadir / (getCalendarAggregates().total || 1)) * 100)}%)</span>
+                <span className="text-amber-500">S: {getCalendarAggregates().sakit} ({Math.round((getCalendarAggregates().sakit / (getCalendarAggregates().total || 1)) * 100)}%)</span>
+                <span className="text-strong-blue">I: {getCalendarAggregates().izin} ({Math.round((getCalendarAggregates().izin / (getCalendarAggregates().total || 1)) * 100)}%)</span>
+                <span className="text-red-500">A: {getCalendarAggregates().alpha} ({Math.round((getCalendarAggregates().alpha / (getCalendarAggregates().total || 1)) * 100)}%)</span>
                 <span className="text-zinc-800 border-l border-zinc-200 pl-2">Total: {getCalendarAggregates().total} Hari</span>
               </div>
 
@@ -1078,6 +1375,134 @@ export default function ClassDetailPage({ params }: { params: Promise<{ id: stri
                   Terapkan
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Konfirmasi Keluarkan Siswa */}
+      {confirmRemoveStudent && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+          <div className="bg-white border border-zinc-200 rounded-xl w-full max-w-sm shadow-2xl overflow-hidden animate-scale-up">
+            <div className="p-5 border-b border-zinc-200 bg-zinc-50 flex items-center gap-2">
+              <AlertCircle className="text-red-500" size={18} />
+              <h3 className="font-extrabold text-zinc-900 text-sm">Konfirmasi Keluarkan Siswa</h3>
+            </div>
+            <div className="p-5 space-y-3">
+              <p className="text-xs text-zinc-600 leading-relaxed font-medium">
+                Apakah Anda yakin ingin mengeluarkan siswa <strong className="text-zinc-900">{confirmRemoveStudent.nama_lengkap}</strong> dari kelas <strong className="text-zinc-900">{kelas.nama_kelas}</strong>?
+              </p>
+              <p className="text-[11px] text-zinc-400 font-medium">
+                Siswa ini tidak akan terdaftar di kelas manapun setelah dikeluarkan, namun seluruh riwayat data akademiknya tetap tersimpan di database.
+              </p>
+            </div>
+            <div className="p-4 bg-zinc-50 border-t border-zinc-200 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setConfirmRemoveStudent(null)}
+                className="px-3.5 py-2 hover:bg-zinc-200 text-zinc-500 hover:text-zinc-800 rounded-lg text-xs font-bold transition-all cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={() => executeRemoveStudent(confirmRemoveStudent.id)}
+                className="px-3.5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold transition-all shadow-md cursor-pointer"
+              >
+                Keluarkan
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Konfirmasi Pindahkan Kelas */}
+      {confirmMoveStudent && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+          <div className="bg-white border border-zinc-200 rounded-xl w-full max-w-sm shadow-2xl overflow-hidden animate-scale-up">
+            <div className="p-5 border-b border-zinc-200 bg-zinc-50 flex items-center gap-2">
+              <Shuffle className="text-strong-blue" size={18} />
+              <h3 className="font-extrabold text-zinc-900 text-sm">Pindahkan Kelas</h3>
+            </div>
+            <div className="p-5 space-y-4">
+              <p className="text-xs text-zinc-600 leading-relaxed font-medium">
+                Pilih kelas tujuan baru untuk memindahkan siswa <strong className="text-zinc-900">{confirmMoveStudent.nama_lengkap}</strong>:
+              </p>
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider block">Kelas Tujuan</label>
+                <select
+                  value={targetClassId}
+                  onChange={(e) => setTargetClassId(e.target.value)}
+                  className="w-full bg-white border border-zinc-300 rounded-lg px-3 py-2 text-xs text-zinc-900 focus:outline-none focus:border-strong-blue focus:ring-1 focus:ring-strong-blue"
+                >
+                  <option value="">-- Pilih Kelas Tujuan --</option>
+                  {classList
+                    .filter((c) => c.id !== classId)
+                    .map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.nama_kelas} ({c.tahun_ajaran})
+                      </option>
+                    ))}
+                </select>
+              </div>
+            </div>
+            <div className="p-4 bg-zinc-50 border-t border-zinc-200 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setConfirmMoveStudent(null);
+                  setTargetClassId("");
+                }}
+                className="px-3.5 py-2 hover:bg-zinc-200 text-zinc-500 hover:text-zinc-800 rounded-lg text-xs font-bold transition-all cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                disabled={!targetClassId}
+                onClick={() => executeMoveStudent(confirmMoveStudent.id, targetClassId)}
+                className={`px-3.5 py-2 text-white rounded-lg text-xs font-bold transition-all shadow-md cursor-pointer ${
+                  targetClassId ? "bg-strong-blue hover:bg-[#001D6E]" : "bg-zinc-300 cursor-not-allowed"
+                }`}
+              >
+                Pindahkan
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Konfirmasi Luluskan Siswa */}
+      {confirmGraduateStudent && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+          <div className="bg-white border border-zinc-200 rounded-xl w-full max-w-sm shadow-2xl overflow-hidden animate-scale-up">
+            <div className="p-5 border-b border-zinc-200 bg-zinc-50 flex items-center gap-2">
+              <GraduationCap className="text-emerald-500" size={18} />
+              <h3 className="font-extrabold text-zinc-900 text-sm">Konfirmasi Luluskan Siswa</h3>
+            </div>
+            <div className="p-5 space-y-3">
+              <p className="text-xs text-zinc-600 leading-relaxed font-medium">
+                Apakah Anda yakin siswa <strong className="text-zinc-900">{confirmGraduateStudent.nama_lengkap}</strong> telah Lulus?
+              </p>
+              <p className="text-[11px] text-zinc-400 font-medium">
+                Tindakan ini akan mengeluarkan siswa secara hormat dari kelas saat ini dan mengosongkan status kelas terdaftarnya (Lulus). Seluruh data akademik sejarah siswa ini tetap tersimpan.
+              </p>
+            </div>
+            <div className="p-4 bg-zinc-50 border-t border-zinc-200 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setConfirmGraduateStudent(null)}
+                className="px-3.5 py-2 hover:bg-zinc-200 text-zinc-500 hover:text-zinc-800 rounded-lg text-xs font-bold transition-all cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={() => executeGraduateStudent(confirmGraduateStudent.id)}
+                className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-all shadow-md cursor-pointer"
+              >
+                Ya, Luluskan
+              </button>
             </div>
           </div>
         </div>

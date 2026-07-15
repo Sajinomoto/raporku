@@ -9,7 +9,8 @@ import {
   Trash2, 
   X, 
   GraduationCap, 
-  Tag 
+  Tag,
+  AlertCircle
 } from "lucide-react";
 
 interface MataPelajaran {
@@ -29,6 +30,7 @@ export default function MapelPage() {
   const [formId, setFormId] = useState("");
   const [formNama, setFormNama] = useState("");
   const [formKategori, setFormKategori] = useState("Wajib");
+  const [confirmDeleteSubject, setConfirmDeleteSubject] = useState<MataPelajaran | null>(null);
 
   useEffect(() => {
     fetchSubjects();
@@ -96,9 +98,7 @@ export default function MapelPage() {
     setShowForm(true);
   };
 
-  const handleDeleteSubject = async (id: string) => {
-    if (!confirm("Apakah Anda yakin ingin menghapus mata pelajaran ini? Semua data nilai yang terhubung dengan mapel ini juga akan terhapus secara otomatis.")) return;
-
+  const executeDeleteSubject = async (id: string) => {
     try {
       const { error } = await supabase
         .from("mata_pelajaran")
@@ -106,6 +106,7 @@ export default function MapelPage() {
         .eq("id", id);
 
       if (error) throw error;
+      setConfirmDeleteSubject(null);
       fetchSubjects();
     } catch (err) {
       console.error("Error deleting subject:", err);
@@ -181,7 +182,7 @@ export default function MapelPage() {
                   <Edit3 size={14} />
                 </button>
                 <button
-                  onClick={() => handleDeleteSubject(subject.id)}
+                  onClick={() => setConfirmDeleteSubject(subject)}
                   className="p-2 hover:bg-red-500/10 text-zinc-500 hover:text-red-600 rounded-lg transition-colors cursor-pointer"
                   title="Hapus Mapel"
                 >
@@ -251,6 +252,42 @@ export default function MapelPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Konfirmasi Hapus Mapel */}
+      {confirmDeleteSubject && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+          <div className="bg-white border border-zinc-200 rounded-xl w-full max-w-sm shadow-2xl overflow-hidden animate-scale-up">
+            <div className="p-5 border-b border-zinc-200 bg-zinc-50 flex items-center gap-2">
+              <AlertCircle className="text-red-500" size={18} />
+              <h3 className="font-extrabold text-zinc-900 text-sm">Konfirmasi Hapus Mapel</h3>
+            </div>
+            <div className="p-5 space-y-3">
+              <p className="text-xs text-zinc-600 leading-relaxed font-medium">
+                Apakah Anda yakin ingin menghapus mata pelajaran <strong className="text-zinc-900">{confirmDeleteSubject.nama_mapel}</strong>?
+              </p>
+              <p className="text-[11px] text-zinc-400 font-medium">
+                Tindakan ini bersifat permanen. Semua data nilai siswa yang terhubung dengan mata pelajaran ini di dalam database juga akan terhapus secara otomatis (ON DELETE CASCADE).
+              </p>
+            </div>
+            <div className="p-4 bg-zinc-50 border-t border-zinc-200 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setConfirmDeleteSubject(null)}
+                className="px-3.5 py-2 hover:bg-zinc-200 text-zinc-500 hover:text-zinc-800 rounded-lg text-xs font-bold transition-all cursor-pointer"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={() => executeDeleteSubject(confirmDeleteSubject.id)}
+                className="px-3.5 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold transition-all shadow-md cursor-pointer"
+              >
+                Hapus
+              </button>
+            </div>
           </div>
         </div>
       )}
