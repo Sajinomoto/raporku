@@ -799,6 +799,18 @@ export default function SiswaPage() {
       toolbar: { show: false },
       foreColor: "#475569",
     },
+    plotOptions: {
+      radar: {
+        size: 50, // Smaller size so labels never get cut off at boundaries
+        polygons: {
+          strokeColors: "#e2e8f0",
+          connectorColors: "#e2e8f0",
+          fill: {
+            colors: ["#f8fafc", "#ffffff"]
+          }
+        }
+      }
+    },
     colors: ["#002583"], // Strong Blue
     stroke: {
       width: 2
@@ -847,6 +859,9 @@ export default function SiswaPage() {
       id: "donut-dist",
       foreColor: "#475569",
     },
+    dataLabels: {
+      enabled: false // Disable percentage overlay on donut segments to prevent overlapping
+    },
     labels: ["A (80-100)", "B (70-79)", "C (60-69)", "D (<60)"],
     colors: ["#10b981", "#3b82f6", "#f59e0b", "#ef4444"],
     legend: {
@@ -870,7 +885,7 @@ export default function SiswaPage() {
     plotOptions: {
       pie: {
         donut: {
-          size: "65%",
+          size: "70%", // Clean donut width
           labels: {
             show: true,
             name: {
