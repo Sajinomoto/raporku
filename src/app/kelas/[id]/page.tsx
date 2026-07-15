@@ -40,6 +40,7 @@ interface MataPelajaran {
   id: string;
   nama_mapel: string;
   kategori: string;
+  jenjang: string;
 }
 
 interface Siswa {
@@ -48,6 +49,7 @@ interface Siswa {
   nis: string;
   kelas_id: string | null;
   foto_url: string | null;
+  jenjang?: string;
 }
 
 interface SiswaWithStats extends Siswa {
@@ -115,7 +117,7 @@ export default function ClassDetailPage({ params }: { params: Promise<{ id: stri
     try {
       const { data } = await supabase
         .from("mata_pelajaran")
-        .select("id, nama_mapel, kategori")
+        .select("id, nama_mapel, kategori, jenjang")
         .order("nama_mapel");
       setSubjects(data || []);
     } catch (err) {
@@ -1010,11 +1012,13 @@ export default function ClassDetailPage({ params }: { params: Promise<{ id: stri
                       className="w-full bg-white border border-zinc-300 rounded-lg px-3 py-2 text-xs text-zinc-900 focus:outline-none focus:border-strong-blue focus:ring-1 focus:ring-strong-blue"
                     >
                       <option value="">-- Pilih Mata Pelajaran --</option>
-                      {subjects.map((subj) => (
-                        <option key={subj.id} value={subj.id}>
-                          {subj.nama_mapel} ({subj.kategori})
-                        </option>
-                      ))}
+                      {subjects
+                        .filter((subj) => subj.jenjang === (modalStudent?.jenjang || "SD"))
+                        .map((subj) => (
+                          <option key={subj.id} value={subj.id}>
+                            {subj.nama_mapel} ({subj.kategori})
+                          </option>
+                        ))}
                     </select>
                   </div>
 

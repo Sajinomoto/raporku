@@ -17,6 +17,7 @@ interface MataPelajaran {
   id: string;
   nama_mapel: string;
   kategori: string;
+  jenjang: string;
   created_at: string;
 }
 
@@ -30,6 +31,7 @@ export default function MapelPage() {
   const [formId, setFormId] = useState("");
   const [formNama, setFormNama] = useState("");
   const [formKategori, setFormKategori] = useState("Wajib");
+  const [formJenjang, setFormJenjang] = useState("SD");
   const [confirmDeleteSubject, setConfirmDeleteSubject] = useState<MataPelajaran | null>(null);
 
   useEffect(() => {
@@ -64,6 +66,7 @@ export default function MapelPage() {
           .update({
             nama_mapel: formNama,
             kategori: formKategori,
+            jenjang: formJenjang,
           })
           .eq("id", formId);
 
@@ -74,6 +77,7 @@ export default function MapelPage() {
           .insert({
             nama_mapel: formNama,
             kategori: formKategori,
+            jenjang: formJenjang,
           });
 
         if (error) throw error;
@@ -84,6 +88,7 @@ export default function MapelPage() {
       setIsEditing(false);
       setFormNama("");
       setFormKategori("Wajib");
+      setFormJenjang("SD");
       fetchSubjects();
     } catch (err) {
       console.error("Error saving subject:", err);
@@ -94,6 +99,7 @@ export default function MapelPage() {
     setFormId(subject.id);
     setFormNama(subject.nama_mapel);
     setFormKategori(subject.kategori);
+    setFormJenjang(subject.jenjang || "SD");
     setIsEditing(true);
     setShowForm(true);
   };
@@ -126,6 +132,7 @@ export default function MapelPage() {
             setIsEditing(false);
             setFormNama("");
             setFormKategori("Wajib");
+            setFormJenjang("SD");
             setShowForm(true);
           }}
           className="flex items-center gap-2 px-4 py-2.5 bg-strong-blue hover:bg-[#001D6E] text-white rounded-lg text-sm font-semibold transition-all shadow-lg shadow-strong-blue/10 cursor-pointer"
@@ -160,16 +167,29 @@ export default function MapelPage() {
                   <h3 className="font-bold text-zinc-900 text-sm tracking-tight">{subject.nama_mapel}</h3>
                 </div>
                 
-                <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                  subject.kategori === "Wajib" 
-                    ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20" 
-                    : subject.kategori === "Peminatan"
-                    ? "bg-purple-500/10 text-purple-600 border border-purple-500/20"
-                    : "bg-mustard/20 text-[#A67800] border border-mustard/35"
-                }`}>
-                  <Tag size={10} />
-                  {subject.kategori}
-                </span>
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                    subject.kategori === "Wajib" 
+                      ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20" 
+                      : subject.kategori === "Peminatan"
+                      ? "bg-purple-500/10 text-purple-600 border border-purple-500/20"
+                      : "bg-mustard/20 text-[#A67800] border border-mustard/35"
+                  }`}>
+                    <Tag size={10} />
+                    {subject.kategori}
+                  </span>
+
+                  <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                    subject.jenjang === "SD"
+                      ? "bg-sky-500/10 text-sky-600 border border-sky-500/20"
+                      : subject.jenjang === "SMP"
+                      ? "bg-amber-500/10 text-[#A67800] border border-amber-500/20"
+                      : "bg-red-500/10 text-red-600 border border-red-500/20"
+                  }`}>
+                    <GraduationCap size={10} />
+                    {subject.jenjang || "SD"}
+                  </span>
+                </div>
               </div>
 
               {/* Actions */}
@@ -233,6 +253,20 @@ export default function MapelPage() {
                   <option value="Wajib">Wajib</option>
                   <option value="Peminatan">Peminatan</option>
                   <option value="Muatan Lokal">Muatan Lokal</option>
+                </select>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-zinc-500">Jenjang</label>
+                <select
+                  value={formJenjang}
+                  onChange={(e) => setFormJenjang(e.target.value)}
+                  required
+                  className="w-full bg-white border border-zinc-300 rounded-lg px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:border-strong-blue focus:ring-1 focus:ring-strong-blue"
+                >
+                  <option value="SD">SD</option>
+                  <option value="SMP">SMP</option>
+                  <option value="SMA">SMA</option>
                 </select>
               </div>
 
