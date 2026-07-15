@@ -129,6 +129,14 @@ export default function SiswaPage() {
   const [calendarYear, setCalendarYear] = useState<number>(new Date().getFullYear());
   const [calendarMonth, setCalendarMonth] = useState<number>(new Date().getMonth());
   const [confirmDeleteStudent, setConfirmDeleteStudent] = useState<Siswa | null>(null);
+  const [toast, setToast] = useState<{ text: string; type: "success" | "error" } | null>(null);
+
+  const showToast = (text: string, type: "success" | "error" = "success") => {
+    setToast({ text, type });
+    setTimeout(() => {
+      setToast(null);
+    }, 3000);
+  };
 
   // Ref for print area
   const printRef = useRef<HTMLDivElement>(null);
@@ -630,6 +638,8 @@ export default function SiswaPage() {
 
         if (error) throw error;
 
+        showToast("Perubahan data siswa berhasil disimpan!", "success");
+
         if (selectedStudent && selectedStudent.id === formId) {
           const updatedStudent = { ...selectedStudent, ...payload, id: formId, created_at: selectedStudent.created_at };
           setSelectedStudent(updatedStudent);
@@ -640,6 +650,8 @@ export default function SiswaPage() {
           .insert(payload);
 
         if (error) throw error;
+
+        showToast("Siswa baru berhasil diregistrasikan!", "success");
       }
 
       setShowForm(false);
@@ -654,6 +666,7 @@ export default function SiswaPage() {
       fetchStudents();
     } catch (err) {
       console.error("Error saving student:", err);
+      showToast("Gagal menyimpan data siswa. Silakan coba lagi.", "error");
     } finally {
       setUploading(false);
     }
@@ -2133,6 +2146,19 @@ export default function SiswaPage() {
                 Hapus
               </button>
             </div>
+          </div>
+        </div>
+      )}
+      {/* Toast Notification */}
+      {toast && (
+        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 animate-bounce-in pointer-events-none">
+          <div className={`flex items-center gap-2.5 px-4 py-3 rounded-xl border shadow-xl ${
+            toast.type === "success" 
+              ? "bg-emerald-50 border-emerald-200 text-emerald-800" 
+              : "bg-red-50 border-red-200 text-red-800"
+          }`}>
+            {toast.type === "success" ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
+            <span className="text-xs font-extrabold">{toast.text}</span>
           </div>
         </div>
       )}

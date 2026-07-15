@@ -10,7 +10,8 @@ import {
   X, 
   GraduationCap, 
   Tag,
-  AlertCircle
+  AlertCircle,
+  Search
 } from "lucide-react";
 
 interface MataPelajaran {
@@ -24,6 +25,9 @@ interface MataPelajaran {
 export default function MapelPage() {
   const [subjects, setSubjects] = useState<MataPelajaran[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedJenjangFilter, setSelectedJenjangFilter] = useState("all");
+  const [selectedKategoriFilter, setSelectedKategoriFilter] = useState("all");
   
   // Form states
   const [showForm, setShowForm] = useState(false);
@@ -54,6 +58,14 @@ export default function MapelPage() {
       setLoading(false);
     }
   };
+
+  const filteredSubjects = subjects.filter((subject) => {
+    const query = searchQuery.toLowerCase();
+    const matchesSearch = subject.nama_mapel.toLowerCase().includes(query);
+    const matchesJenjang = selectedJenjangFilter === "all" || (subject.jenjang || "SD") === selectedJenjangFilter;
+    const matchesKategori = selectedKategoriFilter === "all" || subject.kategori === selectedKategoriFilter;
+    return matchesSearch && matchesJenjang && matchesKategori;
+  });
 
   const handleSaveSubject = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -141,76 +153,132 @@ export default function MapelPage() {
         </button>
       </div>
 
-      {/* Main Content Area */}
+      {/* Search and Filters */}
+      <div className="flex flex-col sm:flex-row gap-4 bg-white border border-zinc-200 rounded-xl p-4 shadow-xs">
+        <div className="flex-1 relative">
+          <Search className="absolute left-3.5 top-3 text-zinc-400" size={16} />
+          <input
+            type="text"
+            placeholder="Cari mata pelajaran..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full bg-white border border-zinc-300 rounded-lg pl-10 pr-4 py-2 text-sm text-zinc-900 focus:outline-none focus:border-strong-blue focus:ring-1 focus:ring-strong-blue"
+          />
+        </div>
+        
+        <div className="flex gap-4">
+          <div className="w-40">
+            <select
+              value={selectedJenjangFilter}
+              onChange={(e) => setSelectedJenjangFilter(e.target.value)}
+              className="w-full bg-white border border-zinc-300 rounded-lg px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:border-strong-blue focus:ring-1 focus:ring-strong-blue"
+            >
+              <option value="all">Semua Jenjang</option>
+              <option value="SD">SD</option>
+              <option value="SMP">SMP</option>
+              <option value="SMA">SMA</option>
+            </select>
+          </div>
+
+          <div className="w-44">
+            <select
+              value={selectedKategoriFilter}
+              onChange={(e) => setSelectedKategoriFilter(e.target.value)}
+              className="w-full bg-white border border-zinc-300 rounded-lg px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:border-strong-blue focus:ring-1 focus:ring-strong-blue"
+            >
+              <option value="all">Semua Kategori</option>
+              <option value="Wajib">Wajib</option>
+              <option value="Peminatan">Peminatan</option>
+              <option value="Muatan Lokal">Muatan Lokal</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content Area (Table List View) */}
       {loading ? (
         <div className="flex items-center justify-center py-20 bg-white border border-zinc-200 rounded-xl text-zinc-500 shadow-xs">
           Memuat data mata pelajaran...
         </div>
-      ) : subjects.length === 0 ? (
+      ) : filteredSubjects.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 bg-white border border-zinc-200 rounded-xl text-center p-6 shadow-xs">
           <BookOpen className="text-zinc-400 mb-4" size={48} />
-          <h3 className="font-bold text-zinc-800 text-base">Belum ada mata pelajaran</h3>
-          <p className="text-xs text-zinc-500 mt-1 max-w-xs font-medium">Silakan tambahkan mata pelajaran baru untuk kurikulum akademik.</p>
+          <h3 className="font-bold text-zinc-800 text-base">Tidak ada mata pelajaran</h3>
+          <p className="text-xs text-zinc-500 mt-1 max-w-xs font-medium">Tidak ditemukan mata pelajaran yang cocok dengan filter atau kata kunci Anda.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {subjects.map((subject) => (
-            <div
-              key={subject.id}
-              className="bg-white border border-zinc-200 rounded-xl p-5 hover:border-strong-blue/30 shadow-xs hover:shadow-md transition-all flex items-center justify-between group"
-            >
-              <div className="space-y-2">
-                <div className="flex items-center gap-2.5">
-                  <div className="p-2.5 bg-strong-blue/10 text-strong-blue rounded-lg">
-                    <BookOpen size={18} />
-                  </div>
-                  <h3 className="font-bold text-zinc-900 text-sm tracking-tight">{subject.nama_mapel}</h3>
-                </div>
-                
-                <div className="flex flex-wrap gap-1.5 mt-2">
-                  <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                    subject.kategori === "Wajib" 
-                      ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20" 
-                      : subject.kategori === "Peminatan"
-                      ? "bg-purple-500/10 text-purple-600 border border-purple-500/20"
-                      : "bg-mustard/20 text-[#A67800] border border-mustard/35"
-                  }`}>
-                    <Tag size={10} />
-                    {subject.kategori}
-                  </span>
-
-                  <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                    subject.jenjang === "SD"
-                      ? "bg-sky-500/10 text-sky-600 border border-sky-500/20"
-                      : subject.jenjang === "SMP"
-                      ? "bg-amber-500/10 text-[#A67800] border border-amber-500/20"
-                      : "bg-red-500/10 text-red-600 border border-red-500/20"
-                  }`}>
-                    <GraduationCap size={10} />
-                    {subject.jenjang || "SD"}
-                  </span>
-                </div>
-              </div>
-
-              {/* Actions */}
-              <div className="flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button
-                  onClick={() => handleEditSubject(subject)}
-                  className="p-2 hover:bg-zinc-100 text-zinc-500 hover:text-strong-blue rounded-lg transition-colors cursor-pointer"
-                  title="Edit Mapel"
+        <div className="bg-white border border-zinc-200 rounded-xl shadow-xs overflow-hidden">
+          <table className="w-full border-collapse text-left">
+            <thead>
+              <tr className="border-b border-zinc-200 bg-zinc-50/70 text-[10px] font-bold text-zinc-400 uppercase tracking-wider">
+                <th className="py-3.5 px-5 w-16">No.</th>
+                <th className="py-3.5 px-5">Nama Mata Pelajaran</th>
+                <th className="py-3.5 px-5 w-40">Kategori</th>
+                <th className="py-3.5 px-5 w-40">Jenjang</th>
+                <th className="py-3.5 px-5 w-28 text-right">Aksi</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-zinc-100 text-xs font-bold text-zinc-800">
+              {filteredSubjects.map((subject, index) => (
+                <tr 
+                  key={subject.id} 
+                  className="hover:bg-zinc-50/50 transition-colors group"
                 >
-                  <Edit3 size={14} />
-                </button>
-                <button
-                  onClick={() => setConfirmDeleteSubject(subject)}
-                  className="p-2 hover:bg-red-500/10 text-zinc-500 hover:text-red-600 rounded-lg transition-colors cursor-pointer"
-                  title="Hapus Mapel"
-                >
-                  <Trash2 size={14} />
-                </button>
-              </div>
-            </div>
-          ))}
+                  <td className="py-3.5 px-5 text-zinc-400 font-medium">{index + 1}</td>
+                  <td className="py-3.5 px-5">
+                    <div className="flex items-center gap-2.5">
+                      <div className="p-1.5 bg-strong-blue/10 text-strong-blue rounded-md shrink-0">
+                        <BookOpen size={14} />
+                      </div>
+                      <span className="text-zinc-900 font-bold">{subject.nama_mapel}</span>
+                    </div>
+                  </td>
+                  <td className="py-3.5 px-5">
+                    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                      subject.kategori === "Wajib" 
+                        ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20" 
+                        : subject.kategori === "Peminatan"
+                        ? "bg-purple-500/10 text-purple-600 border border-purple-500/20"
+                        : "bg-mustard/20 text-[#A67800] border border-mustard/35"
+                    }`}>
+                      <Tag size={10} />
+                      {subject.kategori}
+                    </span>
+                  </td>
+                  <td className="py-3.5 px-5">
+                    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                      (subject.jenjang || "SD") === "SD"
+                        ? "bg-sky-500/10 text-sky-600 border border-sky-500/20"
+                        : (subject.jenjang || "SD") === "SMP"
+                        ? "bg-amber-500/10 text-[#A67800] border border-amber-500/20"
+                        : "bg-red-500/10 text-red-600 border border-red-500/20"
+                    }`}>
+                      <GraduationCap size={10} />
+                      {subject.jenjang || "SD"}
+                    </span>
+                  </td>
+                  <td className="py-3.5 px-5">
+                    <div className="flex items-center justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={() => handleEditSubject(subject)}
+                        className="p-1.5 hover:bg-zinc-100 text-zinc-500 hover:text-strong-blue rounded-md transition-colors cursor-pointer"
+                        title="Edit Mapel"
+                      >
+                        <Edit3 size={13} />
+                      </button>
+                      <button
+                        onClick={() => setConfirmDeleteSubject(subject)}
+                        className="p-1.5 hover:bg-red-500/10 text-zinc-500 hover:text-red-600 rounded-md transition-colors cursor-pointer"
+                        title="Hapus Mapel"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 
