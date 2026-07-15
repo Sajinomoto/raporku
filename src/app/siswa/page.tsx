@@ -801,7 +801,7 @@ export default function SiswaPage() {
     },
     plotOptions: {
       radar: {
-        size: 75, // Now that it has full width, size 75 fits beautifully
+        size: 65, // Moderately smaller to accommodate the multiline labels comfortably
         polygons: {
           strokeColors: "#e2e8f0",
           connectorColors: "#e2e8f0",
@@ -822,7 +822,7 @@ export default function SiswaPage() {
       size: 4
     },
     xaxis: {
-      categories: studentGrades.map(g => g.nama_mapel),
+      categories: studentGrades.map(g => [g.nama_mapel, `(${g.skor})`]),
       labels: {
         style: {
           fontWeight: 700,
@@ -836,8 +836,9 @@ export default function SiswaPage() {
       tickAmount: 5,
       labels: {
         style: {
+          fontSize: "8px", // Smaller font size for central scale numbers
           fontWeight: 600,
-          colors: "#475569"
+          colors: "#94a3b8" // Softer gray for scale numbers
         }
       }
     },
