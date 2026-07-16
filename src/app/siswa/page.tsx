@@ -1236,12 +1236,7 @@ export default function SiswaPage() {
             </div>
           </div>
 
-          {loadingDetails ? (
-            <div className="flex items-center justify-center py-20 bg-white border border-zinc-200 rounded-xl text-zinc-500 shadow-xs">
-              Menghitung statistik siswa...
-            </div>
-          ) : (
-            <div className="space-y-6">
+            <div className="space-y-6 animate-fade-in">
               
               {/* Tab 1: Detailed Profile (hidden when print or when tab is not detail) */}
               <div className={`no-print ${activeTab === "detail" ? "block" : "hidden"}`}>
@@ -1344,10 +1339,14 @@ export default function SiswaPage() {
                       </div>
                       <div>
                         <span className="text-[9px] text-zinc-400 font-bold uppercase tracking-wider block">Rata-Rata Nilai Akademik</span>
-                        <p className="font-extrabold text-strong-blue text-sm">
-                          {studentGrades.length > 0
-                            ? (studentGrades.reduce((sum, g) => sum + g.skor, 0) / studentGrades.length).toFixed(2)
-                            : "Belum ada nilai terinput"}
+                        <p className="font-extrabold text-strong-blue text-sm min-h-[20px] flex items-center">
+                          {loadingDetails ? (
+                            <span className="inline-block animate-pulse bg-zinc-200 h-4 w-12 rounded" />
+                          ) : studentGrades.length > 0 ? (
+                            (studentGrades.reduce((sum, g) => sum + g.skor, 0) / studentGrades.length).toFixed(2)
+                          ) : (
+                            "Belum ada nilai terinput"
+                          )}
                         </p>
                       </div>
                     </div>
@@ -1358,8 +1357,10 @@ export default function SiswaPage() {
                       </div>
                       <div>
                         <span className="text-[9px] text-zinc-400 font-bold uppercase tracking-wider block">Total Kehadiran Aktif</span>
-                        <p className="font-extrabold text-emerald-600 text-sm">
-                          {(() => {
+                        <p className="font-extrabold text-emerald-600 text-sm min-h-[20px] flex items-center">
+                          {loadingDetails ? (
+                            <span className="inline-block animate-pulse bg-zinc-200 h-4 w-24 rounded" />
+                          ) : (() => {
                             if (!studentAttendance) return "0 Sesi | 0% Kehadiran";
                             const h = studentAttendance.hadir || 0;
                             const s = studentAttendance.sakit || 0;
@@ -1603,161 +1604,207 @@ export default function SiswaPage() {
                   </div>
 
                   {/* Rangkuman Metrik Row */}
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div className="bg-zinc-50 border border-zinc-200 print-card rounded-xl p-4 text-center shadow-xs">
-                      <span className="text-[10px] text-zinc-500 print-text-muted font-bold uppercase tracking-wider block">Rata-Rata</span>
-                      <p className="text-2xl font-black text-strong-blue print-text mt-1">{avgGrade > 0 ? avgGrade.toFixed(2) : "0.00"}</p>
-                      <span className={`inline-block text-[9px] font-bold px-2 py-0.5 rounded mt-1.5 ${
-                        avgGrade >= 80 ? "bg-emerald-500/10 text-emerald-600" : "bg-mustard/20 text-[#A67800]"
-                      }`}>
-                        {overallPredicate.desc}
-                      </span>
+                  {loadingDetails ? (
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      {Array(4).fill(0).map((_, idx) => (
+                        <div key={idx} className="bg-zinc-50 border border-zinc-200 rounded-xl p-4 space-y-2 animate-pulse">
+                          <div className="h-3 bg-zinc-200 rounded w-16 mx-auto" />
+                          <div className="h-6 bg-zinc-300 rounded w-12 mx-auto" />
+                          <div className="h-3 bg-zinc-200 rounded w-20 mx-auto" />
+                        </div>
+                      ))}
                     </div>
+                  ) : (
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="bg-zinc-50 border border-zinc-200 print-card rounded-xl p-4 text-center shadow-xs">
+                        <span className="text-[10px] text-zinc-500 print-text-muted font-bold uppercase tracking-wider block">Rata-Rata</span>
+                        <p className="text-2xl font-black text-strong-blue print-text mt-1">{avgGrade > 0 ? avgGrade.toFixed(2) : "0.00"}</p>
+                        <span className={`inline-block text-[9px] font-bold px-2 py-0.5 rounded mt-1.5 ${
+                          avgGrade >= 80 ? "bg-emerald-500/10 text-emerald-600" : "bg-mustard/20 text-[#A67800]"
+                        }`}>
+                          {overallPredicate.desc}
+                        </span>
+                      </div>
 
-                    <div className="bg-zinc-50 border border-zinc-200 print-card rounded-xl p-4 text-center shadow-xs">
-                      <span className="text-[10px] text-zinc-500 print-text-muted font-bold uppercase tracking-wider block">Kehadiran</span>
-                      <p className="text-2xl font-black text-emerald-600 print-text mt-1">{Math.round(attendancePercent)}%</p>
-                      <span className="inline-block text-[9px] font-bold px-2 py-0.5 rounded mt-1.5 bg-emerald-500/10 text-emerald-600">
-                        {attendancePercent >= 90 ? "Sangat Baik" : attendancePercent >= 75 ? "Baik" : "Kurang"}
-                      </span>
+                      <div className="bg-zinc-50 border border-zinc-200 print-card rounded-xl p-4 text-center shadow-xs">
+                        <span className="text-[10px] text-zinc-500 print-text-muted font-bold uppercase tracking-wider block">Kehadiran</span>
+                        <p className="text-2xl font-black text-emerald-600 print-text mt-1">{Math.round(attendancePercent)}%</p>
+                        <span className="inline-block text-[9px] font-bold px-2 py-0.5 rounded mt-1.5 bg-emerald-500/10 text-emerald-600">
+                          {attendancePercent >= 90 ? "Sangat Baik" : attendancePercent >= 75 ? "Baik" : "Kurang"}
+                        </span>
+                      </div>
+
+                      <div className="bg-zinc-50 border border-zinc-200 print-card rounded-xl p-4 text-center shadow-xs">
+                        <span className="text-[10px] text-zinc-500 print-text-muted font-bold uppercase tracking-wider block">Total Hadir</span>
+                        <p className="text-2xl font-black text-zinc-800 print-text mt-1">{(studentAttendance?.hadir || 0)} Sesi</p>
+                        <span className="inline-block text-[9px] font-bold px-2 py-0.5 rounded mt-1.5 bg-zinc-200 print-fill-card text-zinc-600 print-text-muted">
+                          Dari {studentAttendance?.total_sesi || 0} Sesi
+                        </span>
+                      </div>
+
+                      <div className="bg-zinc-50 border border-zinc-200 print-card rounded-xl p-4 text-center shadow-xs">
+                        <span className="text-[10px] text-zinc-500 print-text-muted font-bold uppercase tracking-wider block">Predikat</span>
+                        <p className="text-2xl font-black text-purple-600 print-text mt-1">{overallPredicate.letter}</p>
+                        <span className="inline-block text-[9px] font-bold px-2 py-0.5 rounded mt-1.5 bg-purple-500/10 text-purple-600">
+                          {overallPredicate.desc}
+                        </span>
+                      </div>
                     </div>
+                  )}
 
-                    <div className="bg-zinc-50 border border-zinc-200 print-card rounded-xl p-4 text-center shadow-xs">
-                      <span className="text-[10px] text-zinc-500 print-text-muted font-bold uppercase tracking-wider block">Total Hadir</span>
-                      <p className="text-2xl font-black text-zinc-800 print-text mt-1">{(studentAttendance?.hadir || 0)} Sesi</p>
-                      <span className="inline-block text-[9px] font-bold px-2 py-0.5 rounded mt-1.5 bg-zinc-200 print-fill-card text-zinc-600 print-text-muted">
-                        Dari {studentAttendance?.total_sesi || 0} Sesi
-                      </span>
-                    </div>
-
-                    <div className="bg-zinc-50 border border-zinc-200 print-card rounded-xl p-4 text-center shadow-xs">
-                      <span className="text-[10px] text-zinc-500 print-text-muted font-bold uppercase tracking-wider block">Predikat</span>
-                      <p className="text-2xl font-black text-purple-600 print-text mt-1">{overallPredicate.letter}</p>
-                      <span className="inline-block text-[9px] font-bold px-2 py-0.5 rounded mt-1.5 bg-purple-500/10 text-purple-600">
-                        {overallPredicate.desc}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Visualisasi Grafik Row (ApexCharts) */}
-                  <div className="grid grid-cols-1 gap-6 print-grid">
-                    <div className="bg-white border border-zinc-200 rounded-xl p-4 space-y-2 shadow-xs">
-                      <h4 className="text-xs font-bold text-strong-blue tracking-wide border-b border-zinc-200 pb-2">NILAI SETIAP MAPEL</h4>
-                      {studentGrades.length > 0 ? (
-                        <ReactApexChart 
-                          options={barChartOptions} 
-                          series={barChartSeries} 
-                          type="bar" 
-                          height={dynamicBarHeight} 
-                        />
-                      ) : (
-                        <div className="h-[240px] flex items-center justify-center text-[10px] text-zinc-500 font-medium">Belum ada nilai</div>
-                      )}
-                    </div>
-
-                    <div className="bg-white border border-zinc-200 rounded-xl p-4 space-y-2 shadow-xs">
-                      <h4 className="text-xs font-bold text-strong-blue tracking-wide border-b border-zinc-200 pb-2">GRAFIK KEMAMPUAN (RADAR)</h4>
-                      {studentGrades.length > 0 ? (
-                        <ReactApexChart 
-                          options={radarChartOptions} 
-                          series={radarChartSeries} 
-                          type="radar" 
-                          height={240} 
-                        />
-                      ) : (
-                        <div className="h-[240px] flex items-center justify-center text-[10px] text-zinc-500 font-medium">Belum ada nilai</div>
-                      )}
-                    </div>
-
-                    <div className="bg-white border border-zinc-200 rounded-xl p-4 space-y-2 shadow-xs">
-                      <h4 className="text-xs font-bold text-strong-blue tracking-wide border-b border-zinc-200 pb-2">DISTRIBUSI NILAI</h4>
-                      {studentGrades.length > 0 ? (
-                        <ReactApexChart 
-                          options={donutChartOptions} 
-                          series={donutChartSeries} 
-                          type="donut" 
-                          height={240} 
-                        />
-                      ) : (
-                        <div className="h-[240px] flex items-center justify-center text-[10px] text-zinc-500 font-medium">Belum ada nilai</div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Detail Nilai & Kehadiran Table */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    
-                    {/* Attendance details */}
-                    <div className="md:col-span-1 space-y-2">
-                      <h4 className="text-xs font-bold text-strong-blue print-text tracking-wide border-b-2 print-border border-zinc-200 pb-2">KEHADIRAN</h4>
-                      <table className="w-full text-xs text-zinc-600 print-text-muted">
-                        <thead>
-                          <tr className="border-b border-zinc-200 print-border">
-                            <th className="py-2 text-left">Keterangan</th>
-                            <th className="py-2 text-right">Jumlah</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-zinc-200 print-border">
-                          <tr>
-                            <td className="py-2 font-medium text-zinc-800 print-text">Hadir</td>
-                            <td className="py-2 text-right">{(studentAttendance?.hadir || 0)} Sesi</td>
-                          </tr>
-                          <tr>
-                            <td className="py-2 font-medium text-zinc-800 print-text">Sakit</td>
-                            <td className="py-2 text-right">{(studentAttendance?.sakit || 0)} Sesi</td>
-                          </tr>
-                          <tr>
-                            <td className="py-2 font-medium text-zinc-800 print-text">Izin</td>
-                            <td className="py-2 text-right">{(studentAttendance?.izin || 0)} Sesi</td>
-                          </tr>
-                          <tr>
-                            <td className="py-2 font-medium text-zinc-800 print-text">Alpa (Alpha)</td>
-                            <td className="py-2 text-right">{(studentAttendance?.alpha || 0)} Sesi</td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-
-                    {/* Table of subject details (Print friendly) */}
-                    <div className="md:col-span-2 space-y-2">
-                      <h4 className="text-xs font-bold text-strong-blue print-text tracking-wide border-b-2 print-border border-zinc-200 pb-2">DETAIL NILAI</h4>
-                      <table className="w-full text-xs text-zinc-600 print-text-muted">
-                        <thead>
-                          <tr className="border-b border-zinc-200 print-border">
-                            <th className="py-2 text-left">Mata Pelajaran</th>
-                            <th className="py-2">Kategori</th>
-                            <th className="py-2 text-right">Skor</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-zinc-200 print-border">
-                          {studentGrades.map((g) => (
-                            <tr key={g.id}>
-                              <td className="py-2 font-medium text-zinc-800 print-text">{g.nama_mapel}</td>
-                              <td className="py-2">{g.kategori}</td>
-                              <td className="py-2 text-right font-bold text-strong-blue print-text">{g.skor}</td>
-                            </tr>
-                          ))}
-                          {studentGrades.length === 0 && (
-                            <tr>
-                              <td colSpan={3} className="py-4 text-center text-zinc-500 italic">Belum ada nilai terinput.</td>
-                            </tr>
+                    {/* Visualisasi Grafik Row (ApexCharts) */}
+                    {loadingDetails ? (
+                      <div className="grid grid-cols-1 gap-6 print-grid">
+                        {Array(3).fill(0).map((_, idx) => (
+                          <div key={idx} className="bg-white border border-zinc-200 rounded-xl p-6 h-[280px] flex flex-col justify-center items-center gap-3 animate-pulse">
+                            <div className="h-4 bg-zinc-200 rounded w-32" />
+                            <div className="w-full flex-1 bg-zinc-50 rounded-xl flex items-center justify-center text-xs text-zinc-400 font-bold uppercase tracking-wider">
+                              Memuat grafik...
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 gap-6 print-grid">
+                        <div className="bg-white border border-zinc-200 rounded-xl p-4 space-y-2 shadow-xs">
+                          <h4 className="text-xs font-bold text-strong-blue tracking-wide border-b border-zinc-200 pb-2">NILAI SETIAP MAPEL</h4>
+                          {studentGrades.length > 0 ? (
+                            <ReactApexChart 
+                              options={barChartOptions} 
+                              series={barChartSeries} 
+                              type="bar" 
+                              height={dynamicBarHeight} 
+                            />
+                          ) : (
+                            <div className="h-[240px] flex items-center justify-center text-[10px] text-zinc-500 font-medium">Belum ada nilai</div>
                           )}
-                        </tbody>
-                      </table>
-                    </div>
+                        </div>
 
-                  </div>
+                        <div className="bg-white border border-zinc-200 rounded-xl p-4 space-y-2 shadow-xs">
+                          <h4 className="text-xs font-bold text-strong-blue tracking-wide border-b border-zinc-200 pb-2">GRAFIK KEMAMPUAN (RADAR)</h4>
+                          {studentGrades.length > 0 ? (
+                            <ReactApexChart 
+                              options={radarChartOptions} 
+                              series={radarChartSeries} 
+                              type="radar" 
+                              height={240} 
+                            />
+                          ) : (
+                            <div className="h-[240px] flex items-center justify-center text-[10px] text-zinc-500 font-medium">Belum ada nilai</div>
+                          )}
+                        </div>
 
-                  {/* Catatan Guru */}
-                  <div className="bg-zinc-50 border border-zinc-200 print-card rounded-xl p-5 space-y-2">
-                    <h4 className="text-xs font-bold text-strong-blue print-text tracking-wide border-b border-zinc-200 print-border pb-2">CATATAN WALI KELAS</h4>
-                    <p className="text-xs text-zinc-700 print-text leading-relaxed italic">
-                      "{studentNote?.catatan}"
-                    </p>
-                    <div className="text-right text-[10px] text-zinc-500 print-text-muted font-bold mt-2">
-                      Nama Guru: {studentNote?.nama_guru}
-                    </div>
-                  </div>
+                        <div className="bg-white border border-zinc-200 rounded-xl p-4 space-y-2 shadow-xs">
+                          <h4 className="text-xs font-bold text-strong-blue tracking-wide border-b border-zinc-200 pb-2">DISTRIBUSI NILAI</h4>
+                          {studentGrades.length > 0 ? (
+                            <ReactApexChart 
+                              options={donutChartOptions} 
+                              series={donutChartSeries} 
+                              type="donut" 
+                              height={240} 
+                            />
+                          ) : (
+                            <div className="h-[240px] flex items-center justify-center text-[10px] text-zinc-500 font-medium">Belum ada nilai</div>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Detail Nilai & Kehadiran Table */}
+                    {loadingDetails ? (
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-pulse bg-white border border-zinc-200 rounded-xl p-6">
+                        <div className="md:col-span-1 space-y-4">
+                          <div className="h-4 bg-zinc-200 rounded w-24" />
+                          <div className="h-32 bg-zinc-50 rounded-xl" />
+                        </div>
+                        <div className="md:col-span-2 space-y-4">
+                          <div className="h-4 bg-zinc-200 rounded w-24" />
+                          <div className="h-32 bg-zinc-50 rounded-xl" />
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        
+                        {/* Attendance details */}
+                        <div className="md:col-span-1 space-y-2">
+                          <h4 className="text-xs font-bold text-strong-blue print-text tracking-wide border-b-2 print-border border-zinc-200 pb-2">KEHADIRAN</h4>
+                          <table className="w-full text-xs text-zinc-600 print-text-muted">
+                            <thead>
+                              <tr className="border-b border-zinc-200 print-border">
+                                <th className="py-2 text-left">Keterangan</th>
+                                <th className="py-2 text-right">Jumlah</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-zinc-200 print-border">
+                              <tr>
+                                <td className="py-2 font-medium text-zinc-800 print-text">Hadir</td>
+                                <td className="py-2 text-right">{(studentAttendance?.hadir || 0)} Sesi</td>
+                              </tr>
+                              <tr>
+                                <td className="py-2 font-medium text-zinc-800 print-text">Sakit</td>
+                                <td className="py-2 text-right">{(studentAttendance?.sakit || 0)} Sesi</td>
+                              </tr>
+                              <tr>
+                                <td className="py-2 font-medium text-zinc-800 print-text">Izin</td>
+                                <td className="py-2 text-right">{(studentAttendance?.izin || 0)} Sesi</td>
+                              </tr>
+                              <tr>
+                                <td className="py-2 font-medium text-zinc-800 print-text">Alpa (Alpha)</td>
+                                <td className="py-2 text-right">{(studentAttendance?.alpha || 0)} Sesi</td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
+  
+                        {/* Table of subject details (Print friendly) */}
+                        <div className="md:col-span-2 space-y-2">
+                          <h4 className="text-xs font-bold text-strong-blue print-text tracking-wide border-b-2 print-border border-zinc-200 pb-2">DETAIL NILAI</h4>
+                          <table className="w-full text-xs text-zinc-600 print-text-muted">
+                            <thead>
+                              <tr className="border-b border-zinc-200 print-border">
+                                <th className="py-2 text-left">Mata Pelajaran</th>
+                                <th className="py-2">Kategori</th>
+                                <th className="py-2 text-right">Skor</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-zinc-200 print-border">
+                              {studentGrades.map((g) => (
+                                <tr key={g.id}>
+                                  <td className="py-2 font-medium text-zinc-800 print-text">{g.nama_mapel}</td>
+                                  <td className="py-2">{g.kategori}</td>
+                                  <td className="py-2 text-right font-bold text-strong-blue print-text">{g.skor}</td>
+                                </tr>
+                              ))}
+                              {studentGrades.length === 0 && (
+                                <tr>
+                                  <td colSpan={3} className="py-4 text-center text-zinc-500 italic">Belum ada nilai terinput.</td>
+                                </tr>
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+  
+                      </div>
+                    )}
+
+                    {/* Catatan Guru */}
+                    {loadingDetails ? (
+                      <div className="bg-zinc-50 border border-zinc-200 rounded-xl p-5 space-y-3 animate-pulse">
+                        <div className="h-4 bg-zinc-200 rounded w-32" />
+                        <div className="h-3 bg-zinc-200 rounded w-full" />
+                        <div className="h-3 bg-zinc-200 rounded w-2/3" />
+                      </div>
+                    ) : (
+                      <div className="bg-zinc-50 border border-zinc-200 print-card rounded-xl p-5 space-y-2">
+                        <h4 className="text-xs font-bold text-strong-blue print-text tracking-wide border-b border-zinc-200 print-border pb-2">CATATAN WALI KELAS</h4>
+                        <p className="text-xs text-zinc-700 print-text leading-relaxed italic">
+                          "{studentNote?.catatan}"
+                        </p>
+                        <div className="text-right text-[10px] text-zinc-500 print-text-muted font-bold mt-2">
+                          Nama Guru: {studentNote?.nama_guru}
+                        </div>
+                      </div>
+                    )}
 
                   {/* Signatures block */}
                   <div className="grid grid-cols-2 gap-8 text-center text-xs pt-8 border-t border-zinc-200 print-border">
@@ -1785,7 +1832,6 @@ export default function SiswaPage() {
               </div>
 
             </div>
-          )}
         </div>
       )}
 
