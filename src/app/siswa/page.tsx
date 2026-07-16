@@ -125,7 +125,7 @@ export default function SiswaPage() {
   const [modalSaving, setModalSaving] = useState(false);
   const [modalFeedback, setModalFeedback] = useState<{ text: string; type: "success" | "error" } | null>(null);
   const [showCalendarModal, setShowCalendarModal] = useState(false);
-  const [calendarDays, setCalendarDays] = useState<Record<number, "H" | "S" | "I" | "A" | "N">>({});
+  const [calendarDays, setCalendarDays] = useState<Record<string, "H" | "S" | "I" | "A" | "N">>({});
   const [activeCategory, setActiveCategory] = useState<"H" | "S" | "I" | "A" | "N">("H");
   const [calendarYear, setCalendarYear] = useState<number>(new Date().getFullYear());
   const [calendarMonth, setCalendarMonth] = useState<number>(new Date().getMonth());
@@ -202,6 +202,55 @@ export default function SiswaPage() {
     }
   };
 
+  const initializeCalendarFromTotals = (h: number, s: number, i: number, a: number, startYear: number, startMonth: number) => {
+    const initialDays: Record<string, "H" | "S" | "I" | "A" | "N"> = {};
+    let hLeft = h;
+    let sLeft = s;
+    let iLeft = i;
+    let aLeft = a;
+
+    let currentYear = startYear;
+    let currentMonth = startMonth;
+
+    while (hLeft > 0 || sLeft > 0 || iLeft > 0 || aLeft > 0) {
+      const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+      for (let d = daysInMonth; d >= 1; d--) {
+        const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+        
+        // Skip future dates
+        const cellDate = new Date(currentYear, currentMonth, d);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        if (cellDate.getTime() > today.getTime()) {
+          continue;
+        }
+
+        if (hLeft > 0) {
+          initialDays[dateStr] = "H";
+          hLeft--;
+        } else if (sLeft > 0) {
+          initialDays[dateStr] = "S";
+          sLeft--;
+        } else if (iLeft > 0) {
+          initialDays[dateStr] = "I";
+          iLeft--;
+        } else if (aLeft > 0) {
+          initialDays[dateStr] = "A";
+          aLeft--;
+        } else {
+          break;
+        }
+      }
+      currentMonth--;
+      if (currentMonth < 0) {
+        currentMonth = 11;
+        currentYear--;
+      }
+      if (currentYear < startYear - 1) break;
+    }
+    return initialDays;
+  };
+
   const openCalendarModal = () => {
     const now = new Date();
     const year = now.getFullYear();
@@ -210,31 +259,7 @@ export default function SiswaPage() {
     setCalendarYear(year);
     setCalendarMonth(month);
 
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const initialDays: Record<number, "H" | "S" | "I" | "A" | "N"> = {};
-    
-    let hLeft = hadir;
-    let sLeft = sakit;
-    let iLeft = izin;
-    let aLeft = alpha;
-
-    for (let d = 1; d <= daysInMonth; d++) {
-      if (hLeft > 0) {
-        initialDays[d] = "H";
-        hLeft--;
-      } else if (sLeft > 0) {
-        initialDays[d] = "S";
-        sLeft--;
-      } else if (iLeft > 0) {
-        initialDays[d] = "I";
-        iLeft--;
-      } else if (aLeft > 0) {
-        initialDays[d] = "A";
-        aLeft--;
-      } else {
-        initialDays[d] = "N";
-      }
-    }
+    const initialDays = initializeCalendarFromTotals(hadir, sakit, izin, alpha, year, month);
 
     setCalendarDays(initialDays);
     setActiveCategory("H");
@@ -242,42 +267,15 @@ export default function SiswaPage() {
   };
 
   const handleMonthChange = (newMonth: number, newYear: number) => {
-    const aggs = getCalendarAggregates();
     setCalendarMonth(newMonth);
     setCalendarYear(newYear);
-
-    const daysInMonth = new Date(newYear, newMonth + 1, 0).getDate();
-    const initialDays: Record<number, "H" | "S" | "I" | "A" | "N"> = {};
-    let hLeft = aggs.hadir;
-    let sLeft = aggs.sakit;
-    let iLeft = aggs.izin;
-    let aLeft = aggs.alpha;
-
-    for (let d = 1; d <= daysInMonth; d++) {
-      if (hLeft > 0) {
-        initialDays[d] = "H";
-        hLeft--;
-      } else if (sLeft > 0) {
-        initialDays[d] = "S";
-        sLeft--;
-      } else if (iLeft > 0) {
-        initialDays[d] = "I";
-        iLeft--;
-      } else if (aLeft > 0) {
-        initialDays[d] = "A";
-        aLeft--;
-      } else {
-        initialDays[d] = "N";
-      }
-    }
-
-    setCalendarDays(initialDays);
   };
 
   const clickDay = (dayNum: number) => {
+    const dateStr = `${calendarYear}-${String(calendarMonth + 1).padStart(2, "0")}-${String(dayNum).padStart(2, "0")}`;
     setCalendarDays((prev) => ({
       ...prev,
-      [dayNum]: activeCategory
+      [dateStr]: activeCategory
     }));
   };
 
@@ -2119,9 +2117,10 @@ export default function SiswaPage() {
                     ))}
 
                     {/* Active calendar days */}
-                    {Object.keys(calendarDays).map((dayStr) => {
-                      const dayNum = Number(dayStr);
-                      const status = calendarDays[dayNum];
+                    {Array.from({ length: new Date(calendarYear, calendarMonth + 1, 0).getDate() }).map((_, idx) => {
+                      const dayNum = idx + 1;
+                      const dateStr = `${calendarYear}-${String(calendarMonth + 1).padStart(2, "0")}-${String(dayNum).padStart(2, "0")}`;
+                      const status = calendarDays[dateStr] || "N";
                       
                       // Calculate today highlight and future disabling
                       const cellDate = new Date(calendarYear, calendarMonth, dayNum);
