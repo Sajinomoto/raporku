@@ -448,6 +448,21 @@ export default function SiswaPage() {
 
       if (error) throw error;
       setStudents(data || []);
+
+      // Auto-open student report if ID is present in URL query parameters
+      if (typeof window !== "undefined" && data && data.length > 0) {
+        const params = new URLSearchParams(window.location.search);
+        const studentId = params.get("id");
+        if (studentId) {
+          const found = data.find((s: any) => s.id === studentId);
+          if (found) {
+            // Delay slightly to ensure browser rendering context is ready
+            setTimeout(() => {
+              handleOpenReport(found);
+            }, 100);
+          }
+        }
+      }
     } catch (err) {
       console.error("Error fetching students:", err);
     } finally {

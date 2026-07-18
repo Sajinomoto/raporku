@@ -8,6 +8,7 @@ import {
   Plus, 
   Edit3, 
   Trash2, 
+  Search,
   Users, 
   BookOpen,
   ArrowLeft,
@@ -96,6 +97,7 @@ export default function ClassDetailPage({ params }: { params: Promise<{ id: stri
   const [sortBy, setSortBy] = useState<"nama" | "nilai" | "kehadiran">("nama");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [activeDropdownStudentId, setActiveDropdownStudentId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
   const [classList, setClassList] = useState<Kelas[]>([]);
   const [confirmRemoveStudent, setConfirmRemoveStudent] = useState<Siswa | null>(null);
   const [confirmMoveStudent, setConfirmMoveStudent] = useState<Siswa | null>(null);
@@ -724,9 +726,30 @@ export default function ClassDetailPage({ params }: { params: Promise<{ id: stri
 
           {/* Bottom Row: Student List (Full Width) */}
           <div className="bg-white border border-zinc-200 rounded-xl p-6 space-y-4 shadow-xs">
-            <h4 className="font-extrabold text-strong-blue text-sm flex items-center gap-2 border-b border-zinc-100 pb-3">
-              <Users size={16} /> Anggota Kelas
-            </h4>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-zinc-100 pb-3">
+              <h4 className="font-extrabold text-strong-blue text-sm flex items-center gap-2">
+                <Users size={16} /> Anggota Kelas
+              </h4>
+              <div className="relative w-full sm:w-64">
+                <Search className="absolute left-3 top-2.5 text-zinc-400" size={14} />
+                <input
+                  type="text"
+                  placeholder="Cari nama atau NIS siswa..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-9 pr-8 py-1.5 bg-zinc-50 hover:bg-zinc-100/50 border border-zinc-200 focus:border-strong-blue focus:bg-white rounded-lg text-xs text-zinc-900 focus:outline-none transition-colors"
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery("")}
+                    className="absolute right-3 top-2 text-zinc-400 hover:text-zinc-600 cursor-pointer"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+            </div>
 
             {students.length === 0 ? (
               <div className="py-12 bg-cool-gray/10 border border-zinc-200 border-dashed rounded-xl text-center text-xs text-zinc-500 font-medium">
@@ -780,7 +803,22 @@ export default function ClassDetailPage({ params }: { params: Promise<{ id: stri
                   </thead>
                   <tbody className="divide-y divide-zinc-200">
                     {(() => {
-                      const sortedList = [...students].sort((a, b) => {
+                      const filteredList = students.filter(student => 
+                        student.nama_lengkap.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                        student.nis.toLowerCase().includes(searchQuery.toLowerCase())
+                      );
+
+                      if (filteredList.length === 0) {
+                        return (
+                          <tr>
+                            <td colSpan={6} className="py-8 text-center text-zinc-500 font-medium italic">
+                              Tidak ada siswa yang cocok dengan pencarian "{searchQuery}"
+                            </td>
+                          </tr>
+                        );
+                      }
+
+                      const sortedList = [...filteredList].sort((a, b) => {
                         let comparison = 0;
                         if (sortBy === "nama") {
                           comparison = a.nama_lengkap.localeCompare(b.nama_lengkap);
@@ -796,7 +834,11 @@ export default function ClassDetailPage({ params }: { params: Promise<{ id: stri
                         return sortOrder === "asc" ? comparison : -comparison;
                       });
                       return sortedList.map((student, idx) => (
-                        <tr key={student.id} className="hover:bg-zinc-50">
+                        <tr 
+                          key={student.id} 
+                          onClick={() => router.push(`/siswa?id=${student.id}`)}
+                          className="hover:bg-zinc-100/75 cursor-pointer transition-colors duration-150"
+                        >
                           <td className="px-4 py-3 text-center font-bold text-zinc-400">{idx + 1}</td>
                           <td className="px-4 py-3 font-semibold text-zinc-900">{student.nama_lengkap}</td>
                           <td className="px-4 py-3 text-zinc-500 font-medium">{student.nis}</td>
@@ -843,7 +885,10 @@ export default function ClassDetailPage({ params }: { params: Promise<{ id: stri
                                       setActiveDropdownStudentId(null);
                                     }}
                                   />
-                                  <div className="absolute right-0 top-full mt-1 bg-white border border-zinc-200 rounded-lg shadow-lg z-20 py-1.5 w-44 animate-scale-up text-left">
+                                  <div 
+                                    className="absolute right-0 top-full mt-1 bg-white border border-zinc-200 rounded-lg shadow-lg z-20 py-1.5 w-44 animate-scale-up text-left"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
                                     <button
                                       type="button"
                                       onClick={() => {
