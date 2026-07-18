@@ -127,6 +127,7 @@ export default function SiswaPage() {
   const [showCalendarModal, setShowCalendarModal] = useState(false);
   const [calendarDays, setCalendarDays] = useState<Record<string, "H" | "S" | "I" | "A" | "N">>({});
   const [activeCategory, setActiveCategory] = useState<"H" | "S" | "I" | "A" | "N">("H");
+  const [academicGrades, setAcademicGrades] = useState<Record<string, number | "">>({});
   const [calendarYear, setCalendarYear] = useState<number>(new Date().getFullYear());
   const [calendarMonth, setCalendarMonth] = useState<number>(new Date().getMonth());
   const [confirmDeleteStudent, setConfirmDeleteStudent] = useState<Siswa | null>(null);
@@ -161,14 +162,13 @@ export default function SiswaPage() {
   };
 
   const openInputInline = async (student: Siswa) => {
-    setSelectedSubjectId("");
-    setSkor("");
     setHadir(0);
     setSakit(0);
     setIzen(0);
     setAlpha(0);
     setCatatan("");
     setNamaGuru("");
+    setAcademicGrades({});
     setModalFeedback(null);
 
     try {
@@ -197,6 +197,20 @@ export default function SiswaPage() {
         setCatatan(noteData.catatan);
         setNamaGuru(noteData.nama_guru);
       }
+
+      // 3. Fetch all grades for this student
+      const { data: gradesData } = await supabase
+        .from("nilai")
+        .select("mapel_id, skor")
+        .eq("siswa_id", student.id);
+      
+      const gradesMap: Record<string, number | ""> = {};
+      if (gradesData) {
+        gradesData.forEach((g) => {
+          gradesMap[g.mapel_id] = g.skor !== null ? Number(g.skor) : "";
+        });
+      }
+      setAcademicGrades(gradesMap);
     } catch (err) {
       console.error("Error loading inline data:", err);
     }
@@ -303,27 +317,21 @@ export default function SiswaPage() {
     setShowCalendarModal(false);
   };
 
-  const handleSubjectChange = async (subjectId: string) => {
-    setSelectedSubjectId(subjectId);
-    if (!selectedStudent || !subjectId) {
-      setSkor("");
-      return;
-    }
-    try {
-      const { data: gradeData } = await supabase
-        .from("nilai")
-        .select("skor")
-        .eq("siswa_id", selectedStudent.id)
-        .eq("mapel_id", subjectId)
-        .maybeSingle();
-
-      if (gradeData) {
-        setSkor(gradeData.skor !== null ? Number(gradeData.skor) : "");
-      } else {
-        setSkor("");
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, currentIndex: number, totalLength: number) => {
+    if (e.key === "Enter" || e.key === "ArrowDown") {
+      e.preventDefault();
+      const nextInput = document.getElementById(`grade-input-${currentIndex + 1}`);
+      if (nextInput) {
+        (nextInput as HTMLInputElement).focus();
+        (nextInput as HTMLInputElement).select();
       }
-    } catch (err) {
-      console.error("Error loading student score:", err);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      const prevInput = document.getElementById(`grade-input-${currentIndex - 1}`);
+      if (prevInput) {
+        (prevInput as HTMLInputElement).focus();
+        (prevInput as HTMLInputElement).select();
+      }
     }
   };
 
@@ -334,34 +342,52 @@ export default function SiswaPage() {
     setModalFeedback(null);
 
     try {
-      // 1. Save grade if specified
-      if (selectedSubjectId && skor !== "") {
-        if (Number(skor) < 0 || Number(skor) > 100) {
-          throw new Error("Skor nilai harus berada dalam rentang 0 sampai 100.");
-        }
+      // 1. Save all grades
+      const studentClass = classes.find(c => c.id === selectedStudent?.kelas_id);
+      const filteredSubjects = subjects.filter(
+        (subj) => subj.jenjang === (studentClass?.jenjang || "SD")
+      );
 
-        const { data: existingGrade } = await supabase
-          .from("nilai")
-          .select("id")
-          .eq("siswa_id", selectedStudent.id)
-          .eq("mapel_id", selectedSubjectId)
-          .maybeSingle();
+      for (const subj of filteredSubjects) {
+        const score = academicGrades[subj.id];
+        
+        if (score !== undefined) {
+          if (score !== "" && (Number(score) < 0 || Number(score) > 100)) {
+            throw new Error("Skor nilai harus berada dalam rentang 0 sampai 100.");
+          }
 
-        if (existingGrade) {
-          const { error } = await supabase
+          const { data: existingGrade } = await supabase
             .from("nilai")
-            .update({ skor: Number(skor) })
-            .eq("id", existingGrade.id);
-          if (error) throw error;
-        } else {
-          const { error } = await supabase
-            .from("nilai")
-            .insert({
-              siswa_id: selectedStudent.id,
-              mapel_id: selectedSubjectId,
-              skor: Number(skor)
-            });
-          if (error) throw error;
+            .select("id")
+            .eq("siswa_id", selectedStudent.id)
+            .eq("mapel_id", subj.id)
+            .maybeSingle();
+
+          if (existingGrade) {
+            if (score === "") {
+              // Delete score if cleared
+              const { error } = await supabase
+                .from("nilai")
+                .delete()
+                .eq("id", existingGrade.id);
+              if (error) throw error;
+            } else {
+              const { error } = await supabase
+                .from("nilai")
+                .update({ skor: Number(score) })
+                .eq("id", existingGrade.id);
+              if (error) throw error;
+            }
+          } else if (score !== "") {
+            const { error } = await supabase
+              .from("nilai")
+              .insert({
+                siswa_id: selectedStudent.id,
+                mapel_id: subj.id,
+                skor: Number(score),
+              });
+            if (error) throw error;
+          }
         }
       }
 
@@ -1418,42 +1444,61 @@ export default function SiswaPage() {
                           <FileSpreadsheet size={14} /> Nilai Akademik
                         </h4>
                         
-                        <div className="space-y-1">
-                          <label className="text-xs font-bold text-zinc-500 flex items-center gap-1.5">Mata Pelajaran</label>
-                          <select
-                            value={selectedSubjectId}
-                            onChange={(e) => handleSubjectChange(e.target.value)}
-                            className="w-full bg-white border border-zinc-300 rounded-lg px-3 py-2 text-xs text-zinc-900 focus:outline-none focus:border-strong-blue focus:ring-1 focus:ring-strong-blue"
-                          >
-                            <option value="">-- Pilih Mata Pelajaran --</option>
-                            {subjects
-                              .filter((subj) => {
-                                const studentClass = classes.find(c => c.id === selectedStudent?.kelas_id);
-                                return subj.jenjang === (studentClass?.jenjang || "SD");
-                              })
-                              .map((subj) => (
-                                <option key={subj.id} value={subj.id}>
-                                  {subj.nama_mapel} ({subj.kategori})
-                                </option>
-                              ))}
-                          </select>
-                        </div>
-
-                        {selectedSubjectId && (
-                          <div className="space-y-1 animate-fade-in">
-                            <label className="text-xs font-bold text-zinc-500 block">Skor Nilai</label>
-                            <input
-                              type="number"
-                              min={0}
-                              max={100}
-                              required
-                              placeholder="Rentang 0 - 100"
-                              value={skor}
-                              onChange={(e) => setSkor(e.target.value === "" ? "" : Number(e.target.value))}
-                              className="w-full bg-white border border-zinc-300 rounded-lg px-3 py-2 text-xs text-zinc-900 focus:outline-none focus:border-strong-blue focus:ring-1 focus:ring-strong-blue"
-                            />
-                          </div>
-                        )}
+                        {(() => {
+                          const studentClass = classes.find(c => c.id === selectedStudent?.kelas_id);
+                          const filteredSubjects = subjects.filter(
+                            (subj) => subj.jenjang === (studentClass?.jenjang || "SD")
+                          );
+                          if (filteredSubjects.length === 0) {
+                            return (
+                              <div className="py-6 text-center text-xs text-zinc-500 italic">
+                                Belum ada mata pelajaran terdaftar untuk jenjang {studentClass?.jenjang || "SD"}.
+                              </div>
+                            );
+                          }
+                          return (
+                            <div className="border border-zinc-200 rounded-xl overflow-hidden bg-white shadow-xs max-h-[300px] overflow-y-auto">
+                              <table className="w-full text-left text-xs text-zinc-600">
+                                <thead className="bg-zinc-100 text-zinc-700 font-bold border-b border-zinc-200 sticky top-0 z-10 shadow-xs">
+                                  <tr>
+                                    <th className="px-4 py-2.5 w-12 text-center">No</th>
+                                    <th className="px-4 py-2.5">Nama Mata Pelajaran</th>
+                                    <th className="px-4 py-2.5 w-32">Kategori</th>
+                                    <th className="px-4 py-2.5 w-40 text-center">Skor Nilai (0-100)</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-zinc-200">
+                                  {filteredSubjects.map((subj, idx) => {
+                                    const score = academicGrades[subj.id] ?? "";
+                                    return (
+                                      <tr key={subj.id} className="hover:bg-zinc-50/50">
+                                        <td className="px-4 py-2 text-center font-bold text-zinc-400">{idx + 1}</td>
+                                        <td className="px-4 py-2 font-semibold text-zinc-900">{subj.nama_mapel}</td>
+                                        <td className="px-4 py-2 text-zinc-500 font-medium">{subj.kategori}</td>
+                                        <td className="px-4 py-2">
+                                          <input
+                                            id={`grade-input-${idx}`}
+                                            type="number"
+                                            min={0}
+                                            max={100}
+                                            placeholder="Belum dinilai"
+                                            value={score}
+                                            onChange={(e) => {
+                                              const val = e.target.value === "" ? "" : Number(e.target.value);
+                                              setAcademicGrades(prev => ({ ...prev, [subj.id]: val }));
+                                            }}
+                                            onKeyDown={(e) => handleKeyDown(e, idx, filteredSubjects.length)}
+                                            className="w-full text-center bg-zinc-50 focus:bg-white border border-zinc-200 focus:border-strong-blue rounded-lg px-3 py-1.5 text-xs text-zinc-900 focus:outline-none transition-colors font-bold font-mono focus:ring-1 focus:ring-strong-blue"
+                                          />
+                                        </td>
+                                      </tr>
+                                    );
+                                  })}
+                                </tbody>
+                              </table>
+                            </div>
+                          );
+                        })()}
                       </div>
 
                       {/* Attendance Section */}
