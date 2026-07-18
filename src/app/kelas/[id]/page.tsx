@@ -18,6 +18,7 @@ import {
   TrendingUp,
   Award,
   CalendarDays,
+  Calendar,
   FileSpreadsheet,
   ClipboardCheck,
   Clock,
@@ -59,6 +60,18 @@ interface SubjectGrade {
   materi: string;
   kode_tentor: string;
   tanggal_pembelajaran: string;
+}
+
+interface AcademicRow {
+  id?: string;
+  mapel_id: string;
+  nama_mapel: string;
+  kategori: string;
+  skor: number | "";
+  materi: string;
+  kode_tentor: string;
+  tanggal_pembelajaran: string;
+  jam: string;
 }
 
 interface SiswaWithStats extends Siswa {
@@ -106,7 +119,15 @@ export default function ClassDetailPage({ params }: { params: Promise<{ id: stri
   const [activeDropdownStudentId, setActiveDropdownStudentId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [classList, setClassList] = useState<Kelas[]>([]);
-  const [academicGrades, setAcademicGrades] = useState<Record<string, SubjectGrade>>({});
+  const [academicGrades, setAcademicGrades] = useState<{ rows: AcademicRow[] }>({ rows: [] });
+  const [deletedGradeIds, setDeletedGradeIds] = useState<string[]>([]);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [datePickerTargetRow, setDatePickerTargetRow] = useState<number | null>(null);
+  const [datePickerMonth, setDatePickerMonth] = useState(new Date().getMonth());
+  const [datePickerYear, setDatePickerYear] = useState(new Date().getFullYear());
+  const [showSubjectSelector, setShowSubjectSelector] = useState(false);
+  const [subjectSelectorTargetRow, setSubjectSelectorTargetRow] = useState<number | null>(null);
+  const [subjectSearchQuery, setSubjectSearchQuery] = useState("");
   const [confirmRemoveStudent, setConfirmRemoveStudent] = useState<Siswa | null>(null);
   const [confirmMoveStudent, setConfirmMoveStudent] = useState<Siswa | null>(null);
   const [targetClassId, setTargetClassId] = useState<string>("");
@@ -167,6 +188,92 @@ export default function ClassDetailPage({ params }: { params: Promise<{ id: stri
     }
   };
 
+  const openDatePicker = (idx: number, currentDateStr: string) => {
+    setDatePickerTargetRow(idx);
+    let initialDate = new Date();
+    if (currentDateStr) {
+      const parsed = new Date(currentDateStr);
+      if (!isNaN(parsed.getTime())) {
+        initialDate = parsed;
+      }
+    }
+    setDatePickerMonth(initialDate.getMonth());
+    setDatePickerYear(initialDate.getFullYear());
+    setShowDatePicker(true);
+  };
+
+  const handleSelectDatePickerDate = (day: number) => {
+    if (datePickerTargetRow === null) return;
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const dateStr = `${datePickerYear}-${pad(datePickerMonth + 1)}-${pad(day)}`;
+    
+    setAcademicGrades(prev => {
+      const currentRows = [...prev.rows];
+      currentRows[datePickerTargetRow] = {
+        ...currentRows[datePickerTargetRow],
+        tanggal_pembelajaran: dateStr
+      };
+      return { rows: currentRows };
+    });
+    
+    setShowDatePicker(false);
+    setDatePickerTargetRow(null);
+  };
+
+  const openSubjectSelector = (idx: number) => {
+    setSubjectSelectorTargetRow(idx);
+    setSubjectSearchQuery("");
+    setShowSubjectSelector(true);
+  };
+
+  const handleSelectSubject = (subjectId: string, subjectName: string, category: string) => {
+    if (subjectSelectorTargetRow === null) return;
+    
+    setAcademicGrades(prev => {
+      const currentRows = [...prev.rows];
+      currentRows[subjectSelectorTargetRow] = {
+        ...currentRows[subjectSelectorTargetRow],
+        mapel_id: subjectId,
+        nama_mapel: subjectName,
+        kategori: category
+      };
+      return { rows: currentRows };
+    });
+    
+    setShowSubjectSelector(false);
+    setSubjectSelectorTargetRow(null);
+  };
+
+  const addAcademicRow = () => {
+    setAcademicGrades(prev => ({
+      rows: [
+        ...prev.rows,
+        {
+          mapel_id: "",
+          nama_mapel: "",
+          kategori: "",
+          skor: "",
+          materi: "",
+          kode_tentor: "",
+          tanggal_pembelajaran: new Date().toISOString().split("T")[0],
+          jam: ""
+        }
+      ]
+    }));
+  };
+
+  const removeAcademicRow = (idx: number) => {
+    setAcademicGrades(prev => {
+      const currentRows = [...prev.rows];
+      const target = currentRows[idx];
+      if (target && target.id) {
+        setDeletedGradeIds(d => [...d, target.id!]);
+      }
+      currentRows.splice(idx, 1);
+      return { rows: currentRows };
+    });
+  };
+
   const openInputModal = async (student: Siswa) => {
     setModalStudent(student);
     setHadir(0);
@@ -175,7 +282,8 @@ export default function ClassDetailPage({ params }: { params: Promise<{ id: stri
     setAlpha(0);
     setCatatan("");
     setNamaGuru("");
-    setAcademicGrades({});
+    setAcademicGrades({ rows: [] });
+    setDeletedGradeIds([]);
     setModalFeedback(null);
     setShowInputModal(true);
 
@@ -209,21 +317,48 @@ export default function ClassDetailPage({ params }: { params: Promise<{ id: stri
       // 3. Fetch all grades for this student
       const { data: gradesData } = await supabase
         .from("nilai")
-        .select("mapel_id, skor, materi, kode_tentor, tanggal_pembelajaran")
+        .select(`
+          id,
+          skor,
+          mapel_id,
+          materi,
+          kode_tentor,
+          tanggal_pembelajaran,
+          jam,
+          mata_pelajaran (nama_mapel, kategori)
+        `)
         .eq("siswa_id", student.id);
       
-      const gradesMap: Record<string, SubjectGrade> = {};
+      const rows: AcademicRow[] = [];
       if (gradesData) {
-        gradesData.forEach((g) => {
-          gradesMap[g.mapel_id] = {
+        gradesData.forEach((g: any) => {
+          rows.push({
+            id: g.id,
+            mapel_id: g.mapel_id,
+            nama_mapel: g.mata_pelajaran?.nama_mapel || "Mata Pelajaran",
+            kategori: g.mata_pelajaran?.kategori || "Wajib",
             skor: g.skor !== null ? Number(g.skor) : "",
             materi: g.materi || "",
             kode_tentor: g.kode_tentor || "",
-            tanggal_pembelajaran: g.tanggal_pembelajaran || new Date().toISOString().split("T")[0]
-          };
+            tanggal_pembelajaran: g.tanggal_pembelajaran || new Date().toISOString().split("T")[0],
+            jam: g.jam || ""
+          });
         });
       }
-      setAcademicGrades(gradesMap);
+
+      if (rows.length === 0) {
+        rows.push({
+          mapel_id: "",
+          nama_mapel: "",
+          kategori: "",
+          skor: "",
+          materi: "",
+          kode_tentor: "",
+          tanggal_pembelajaran: new Date().toISOString().split("T")[0],
+          jam: ""
+        });
+      }
+      setAcademicGrades({ rows });
     } catch (err) {
       console.error("Error loading modal data:", err);
     }
@@ -236,68 +371,54 @@ export default function ClassDetailPage({ params }: { params: Promise<{ id: stri
     setModalFeedback(null);
 
     try {
-      // 1. Save all grades
-      const filteredSubjects = subjects.filter(
-        (subj) => subj.jenjang === (kelas?.jenjang || "SD")
-      );
+      // 1. Delete rows that were removed in the UI
+      if (deletedGradeIds.length > 0) {
+        const { error: delError } = await supabase
+          .from("nilai")
+          .delete()
+          .in("id", deletedGradeIds);
+        if (delError) throw delError;
+      }
 
-      for (const subj of filteredSubjects) {
-        const scoreObj = academicGrades[subj.id];
-        
-        if (scoreObj !== undefined) {
-          const score = scoreObj.skor;
-          const materi = scoreObj.materi;
-          const kodeTentor = scoreObj.kode_tentor;
-          const tanggal = scoreObj.tanggal_pembelajaran;
+      // 2. Insert or Update remaining rows
+      for (const row of academicGrades.rows) {
+        if (!row.mapel_id && row.skor === "" && !row.materi && !row.kode_tentor && !row.jam) {
+          continue;
+        }
 
-          if (score !== "" && (Number(score) < 0 || Number(score) > 100)) {
-            throw new Error("Skor nilai harus berada dalam rentang 0 sampai 100.");
-          }
+        if (!row.mapel_id) {
+          throw new Error("Mata pelajaran harus dipilih untuk setiap baris yang diisi.");
+        }
 
-          const { data: existingGrade } = await supabase
+        if (row.skor !== "" && (Number(row.skor) < 0 || Number(row.skor) > 100)) {
+          throw new Error("Skor nilai harus berada dalam rentang 0 sampai 100.");
+        }
+
+        const payload = {
+          siswa_id: modalStudent.id,
+          mapel_id: row.mapel_id,
+          skor: row.skor !== "" ? Number(row.skor) : null,
+          materi: row.materi || null,
+          kode_tentor: row.kode_tentor || null,
+          tanggal_pembelajaran: row.tanggal_pembelajaran || null,
+          jam: row.jam || null
+        };
+
+        if (row.id) {
+          const { error: updError } = await supabase
             .from("nilai")
-            .select("id")
-            .eq("siswa_id", modalStudent.id)
-            .eq("mapel_id", subj.id)
-            .maybeSingle();
-
-          if (existingGrade) {
-            if (score === "" && materi === "" && kodeTentor === "") {
-              // Delete score if everything is cleared
-              const { error } = await supabase
-                .from("nilai")
-                .delete()
-                .eq("id", existingGrade.id);
-              if (error) throw error;
-            } else {
-              const { error } = await supabase
-                .from("nilai")
-                .update({ 
-                  skor: score !== "" ? Number(score) : null,
-                  materi: materi || null,
-                  kode_tentor: kodeTentor || null,
-                  tanggal_pembelajaran: tanggal || null
-                })
-                .eq("id", existingGrade.id);
-              if (error) throw error;
-            }
-          } else if (score !== "" || materi !== "" || kodeTentor !== "") {
-            const { error } = await supabase
-              .from("nilai")
-              .insert({
-                siswa_id: modalStudent.id,
-                mapel_id: subj.id,
-                skor: score !== "" ? Number(score) : null,
-                materi: materi || null,
-                kode_tentor: kodeTentor || null,
-                tanggal_pembelajaran: tanggal || null
-              });
-            if (error) throw error;
-          }
+            .update(payload)
+            .eq("id", row.id);
+          if (updError) throw updError;
+        } else {
+          const { error: insError } = await supabase
+            .from("nilai")
+            .insert(payload);
+          if (insError) throw insError;
         }
       }
 
-      // 2. Save Attendance
+      // 3. Save Attendance
       const totalSesi = hadir + sakit + izin + alpha;
       const { data: existingAtt } = await supabase
         .from("kehadiran")
@@ -331,7 +452,7 @@ export default function ClassDetailPage({ params }: { params: Promise<{ id: stri
         if (error) throw error;
       }
 
-      // 3. Save Notes
+      // 4. Save Notes
       const { data: existingNote } = await supabase
         .from("catatan_guru")
         .select("id")
@@ -1117,130 +1238,171 @@ export default function ClassDetailPage({ params }: { params: Promise<{ id: stri
                     <FileSpreadsheet size={14} /> Nilai Akademik
                   </h4>
                   
-                  {(() => {
-                    const filteredSubjects = subjects.filter(
-                      (subj) => subj.jenjang === (kelas?.jenjang || "SD")
-                    );
-                    if (filteredSubjects.length === 0) {
-                      return (
-                        <div className="py-6 text-center text-xs text-zinc-500 italic">
-                          Belum ada mata pelajaran terdaftar untuk jenjang {kelas?.jenjang || "SD"}.
-                        </div>
-                      );
-                    }
-                    return (
-                      <div className="border border-zinc-200 rounded-xl overflow-hidden bg-white shadow-xs">
-                        <table className="w-full text-left text-xs text-zinc-600">
-                          <thead className="bg-zinc-100 text-zinc-700 font-bold border-b border-zinc-200 sticky top-0 z-10 shadow-xs">
-                            <tr>
-                              <th className="px-4 py-2.5 w-12 text-center">No</th>
-                              <th className="px-4 py-2.5 min-w-[200px]">Nama Mata Pelajaran</th>
-                              <th className="px-4 py-2.5 min-w-[150px]">Materi Pembelajaran</th>
-                              <th className="px-4 py-2.5 w-28 text-center">Kode Tentor</th>
-                              <th className="px-4 py-2.5 w-40 text-center">Tanggal</th>
-                              <th className="px-4 py-2.5 w-28 text-center">Skor (0-100)</th>
+                  <div className="border border-zinc-200 rounded-xl overflow-hidden bg-white shadow-xs">
+                    <table className="w-full text-left text-xs text-zinc-600">
+                      <thead className="bg-zinc-100 text-zinc-700 font-bold border-b border-zinc-200 sticky top-0 z-10 shadow-xs">
+                        <tr>
+                          <th className="px-4 py-2.5 w-12 text-center">No</th>
+                          <th className="px-4 py-2.5 w-44">Tanggal</th>
+                          <th className="px-4 py-2.5 w-28 text-center">Jam</th>
+                          <th className="px-4 py-2.5 w-60">Mata Pelajaran</th>
+                          <th className="px-4 py-2.5 min-w-[200px]">Materi Pembelajaran</th>
+                          <th className="px-4 py-2.5 w-28 text-center">Kode Tentor</th>
+                          <th className="px-4 py-2.5 w-24 text-center">Skor</th>
+                          <th className="px-4 py-2.5 w-12 text-center">Aksi</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-zinc-200">
+                        {(academicGrades.rows || []).map((row, idx) => {
+                          return (
+                            <tr key={idx} className="hover:bg-zinc-50/50 animate-fade-in">
+                              <td className="px-4 py-2 text-center font-bold text-zinc-400">{idx + 1}</td>
+                              
+                              {/* Tanggal column */}
+                              <td className="px-4 py-2">
+                                <button
+                                  type="button"
+                                  onClick={() => openDatePicker(idx, row.tanggal_pembelajaran)}
+                                  className="w-full text-left bg-zinc-50 hover:bg-zinc-100 border border-zinc-200 focus:border-strong-blue rounded-lg px-2.5 py-1.5 text-xs text-zinc-800 font-medium transition-colors flex items-center justify-between cursor-pointer"
+                                >
+                                  <span>
+                                    {row.tanggal_pembelajaran
+                                      ? new Date(row.tanggal_pembelajaran).toLocaleDateString("id-ID", { day: '2-digit', month: 'short', year: 'numeric' })
+                                      : "Atur Tanggal"}
+                                  </span>
+                                  <CalendarDays size={12} className="text-zinc-400" />
+                                </button>
+                              </td>
+
+                              {/* Jam column */}
+                              <td className="px-4 py-2">
+                                <input
+                                  id={`grade-jam-${idx}`}
+                                  type="text"
+                                  placeholder="19.00"
+                                  value={row.jam}
+                                  onChange={(e) => {
+                                    setAcademicGrades(prev => {
+                                      const currentRows = [...prev.rows];
+                                      currentRows[idx] = { ...currentRows[idx], jam: e.target.value };
+                                      return { rows: currentRows };
+                                    });
+                                  }}
+                                  onKeyDown={(e) => handleKeyDown(e, 'grade-jam', idx)}
+                                  className="w-full text-center bg-zinc-50 focus:bg-white border border-zinc-200 focus:border-strong-blue rounded-lg px-2.5 py-1.5 text-xs text-zinc-900 focus:outline-none transition-colors font-mono focus:ring-1 focus:ring-strong-blue"
+                                />
+                              </td>
+
+                              {/* Mata Pelajaran column */}
+                              <td className="px-4 py-2">
+                                <button
+                                  type="button"
+                                  onClick={() => openSubjectSelector(idx)}
+                                  className="w-full text-left bg-zinc-50 hover:bg-zinc-100 border border-zinc-200 focus:border-strong-blue rounded-lg px-2.5 py-1.5 text-xs text-zinc-800 font-semibold transition-colors flex items-center justify-between cursor-pointer"
+                                >
+                                  <span className="truncate max-w-[180px]">
+                                    {row.nama_mapel
+                                      ? `${row.nama_mapel} (${row.kategori})`
+                                      : "Pilih Mapel..."}
+                                  </span>
+                                  <Search size={12} className="text-zinc-400" />
+                                </button>
+                              </td>
+
+                              {/* Materi Pembelajaran column */}
+                              <td className="px-4 py-2">
+                                <input
+                                  id={`grade-materi-${idx}`}
+                                  type="text"
+                                  placeholder="Bahas soal..."
+                                  value={row.materi}
+                                  onChange={(e) => {
+                                    setAcademicGrades(prev => {
+                                      const currentRows = [...prev.rows];
+                                      currentRows[idx] = { ...currentRows[idx], materi: e.target.value };
+                                      return { rows: currentRows };
+                                    });
+                                  }}
+                                  onKeyDown={(e) => handleKeyDown(e, 'grade-materi', idx)}
+                                  className="w-full bg-zinc-50 focus:bg-white border border-zinc-200 focus:border-strong-blue rounded-lg px-2.5 py-1.5 text-xs text-zinc-900 focus:outline-none transition-colors focus:ring-1 focus:ring-strong-blue"
+                                />
+                              </td>
+
+                              {/* Kode Tentor column */}
+                              <td className="px-4 py-2">
+                                <input
+                                  id={`grade-tentor-${idx}`}
+                                  type="text"
+                                  placeholder="Tentor..."
+                                  value={row.kode_tentor}
+                                  onChange={(e) => {
+                                    setAcademicGrades(prev => {
+                                      const currentRows = [...prev.rows];
+                                      currentRows[idx] = { ...currentRows[idx], kode_tentor: e.target.value };
+                                      return { rows: currentRows };
+                                    });
+                                  }}
+                                  onKeyDown={(e) => handleKeyDown(e, 'grade-tentor', idx)}
+                                  className="w-full text-center bg-zinc-50 focus:bg-white border border-zinc-200 focus:border-strong-blue rounded-lg px-2.5 py-1.5 text-xs text-zinc-900 focus:outline-none transition-colors font-mono focus:ring-1 focus:ring-strong-blue"
+                                />
+                              </td>
+
+                              {/* Skor column */}
+                              <td className="px-4 py-2">
+                                <input
+                                  id={`grade-skor-${idx}`}
+                                  type="number"
+                                  min={0}
+                                  max={100}
+                                  placeholder="-"
+                                  value={row.skor}
+                                  onChange={(e) => {
+                                    const val = e.target.value === "" ? "" : Number(e.target.value);
+                                    setAcademicGrades(prev => {
+                                      const currentRows = [...prev.rows];
+                                      currentRows[idx] = { ...currentRows[idx], skor: val };
+                                      return { rows: currentRows };
+                                    });
+                                  }}
+                                  onKeyDown={(e) => handleKeyDown(e, 'grade-skor', idx)}
+                                  className="w-full text-center bg-zinc-50 focus:bg-white border border-zinc-200 focus:border-strong-blue rounded-lg px-2.5 py-1.5 text-xs text-zinc-900 focus:outline-none transition-colors font-bold font-mono focus:ring-1 focus:ring-strong-blue"
+                                />
+                              </td>
+
+                              {/* Aksi column */}
+                              <td className="px-4 py-2 text-center">
+                                <button
+                                  type="button"
+                                  onClick={() => removeAcademicRow(idx)}
+                                  className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg cursor-pointer transition-colors"
+                                  title="Hapus Baris"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </td>
                             </tr>
-                          </thead>
-                          <tbody className="divide-y divide-zinc-200">
-                            {filteredSubjects.map((subj, idx) => {
-                              const scoreObj = academicGrades[subj.id] || {
-                                skor: "",
-                                materi: "",
-                                kode_tentor: "",
-                                tanggal_pembelajaran: new Date().toISOString().split("T")[0]
-                              };
-                              return (
-                                <tr key={subj.id} className="hover:bg-zinc-50/50">
-                                  <td className="px-4 py-2 text-center font-bold text-zinc-400">{idx + 1}</td>
-                                  <td className="px-4 py-2 font-semibold text-zinc-900">
-                                    {subj.nama_mapel} <span className="text-[10px] text-zinc-400 font-medium font-sans">({subj.kategori})</span>
-                                  </td>
-                                  <td className="px-4 py-2">
-                                    <input
-                                      id={`grade-materi-${idx}`}
-                                      type="text"
-                                      placeholder="Bab/Materi..."
-                                      value={scoreObj.materi}
-                                      onChange={(e) => {
-                                        setAcademicGrades(prev => ({
-                                          ...prev,
-                                          [subj.id]: {
-                                            ...(prev[subj.id] || { skor: "", materi: "", kode_tentor: "", tanggal_pembelajaran: new Date().toISOString().split("T")[0] }),
-                                            materi: e.target.value
-                                          }
-                                        }));
-                                      }}
-                                      onKeyDown={(e) => handleKeyDown(e, 'grade-materi', idx)}
-                                      className="w-full bg-zinc-50 focus:bg-white border border-zinc-200 focus:border-strong-blue rounded-lg px-2.5 py-1 text-xs text-zinc-900 focus:outline-none transition-colors focus:ring-1 focus:ring-strong-blue"
-                                    />
-                                  </td>
-                                  <td className="px-4 py-2">
-                                    <input
-                                      id={`grade-tentor-${idx}`}
-                                      type="text"
-                                      placeholder="Kode..."
-                                      value={scoreObj.kode_tentor}
-                                      onChange={(e) => {
-                                        setAcademicGrades(prev => ({
-                                          ...prev,
-                                          [subj.id]: {
-                                            ...(prev[subj.id] || { skor: "", materi: "", kode_tentor: "", tanggal_pembelajaran: new Date().toISOString().split("T")[0] }),
-                                            kode_tentor: e.target.value
-                                          }
-                                        }));
-                                      }}
-                                      onKeyDown={(e) => handleKeyDown(e, 'grade-tentor', idx)}
-                                      className="w-full text-center bg-zinc-50 focus:bg-white border border-zinc-200 focus:border-strong-blue rounded-lg px-2.5 py-1 text-xs text-zinc-900 focus:outline-none transition-colors font-mono focus:ring-1 focus:ring-strong-blue"
-                                    />
-                                  </td>
-                                  <td className="px-4 py-2">
-                                    <input
-                                      id={`grade-tanggal-${idx}`}
-                                      type="date"
-                                      value={scoreObj.tanggal_pembelajaran}
-                                      onChange={(e) => {
-                                        setAcademicGrades(prev => ({
-                                          ...prev,
-                                          [subj.id]: {
-                                            ...(prev[subj.id] || { skor: "", materi: "", kode_tentor: "", tanggal_pembelajaran: new Date().toISOString().split("T")[0] }),
-                                            tanggal_pembelajaran: e.target.value
-                                          }
-                                        }));
-                                      }}
-                                      onKeyDown={(e) => handleKeyDown(e, 'grade-tanggal', idx)}
-                                      className="w-full text-center bg-zinc-50 focus:bg-white border border-zinc-200 focus:border-strong-blue rounded-lg px-2 py-1 text-xs text-zinc-900 focus:outline-none transition-colors font-mono focus:ring-1 focus:ring-strong-blue"
-                                    />
-                                  </td>
-                                  <td className="px-4 py-2">
-                                    <input
-                                      id={`grade-skor-${idx}`}
-                                      type="number"
-                                      min={0}
-                                      max={100}
-                                      placeholder="-"
-                                      value={scoreObj.skor}
-                                      onChange={(e) => {
-                                        const val = e.target.value === "" ? "" : Number(e.target.value);
-                                        setAcademicGrades(prev => ({
-                                          ...prev,
-                                          [subj.id]: {
-                                            ...(prev[subj.id] || { skor: "", materi: "", kode_tentor: "", tanggal_pembelajaran: new Date().toISOString().split("T")[0] }),
-                                            skor: val
-                                          }
-                                        }));
-                                      }}
-                                      onKeyDown={(e) => handleKeyDown(e, 'grade-skor', idx)}
-                                      className="w-full text-center bg-zinc-50 focus:bg-white border border-zinc-200 focus:border-strong-blue rounded-lg px-2.5 py-1 text-xs text-zinc-900 focus:outline-none transition-colors font-bold font-mono focus:ring-1 focus:ring-strong-blue"
-                                    />
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
-                    );
-                  })()}
+                          );
+                        })}
+                        {(!academicGrades.rows || academicGrades.rows.length === 0) && (
+                          <tr>
+                            <td colSpan={8} className="px-4 py-6 text-center text-xs text-zinc-500 italic">
+                              Belum ada materi ditambahkan. Klik tombol di bawah untuk menambah baris.
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className="flex justify-start">
+                    <button
+                      type="button"
+                      onClick={addAcademicRow}
+                      className="flex items-center gap-1.5 px-4 py-2 bg-strong-blue/10 hover:bg-strong-blue/20 text-strong-blue font-bold rounded-lg text-xs transition-colors cursor-pointer"
+                    >
+                      <Plus size={14} /> Tambah Baris
+                    </button>
+                  </div>
                 </div>
 
                 {/* Attendance Section */}
@@ -1335,6 +1497,169 @@ export default function ClassDetailPage({ params }: { params: Promise<{ id: stri
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Date Picker Modal */}
+      {showDatePicker && datePickerTargetRow !== null && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+          <div className="bg-white border border-zinc-200 rounded-xl w-full max-w-sm shadow-2xl overflow-hidden animate-scale-up">
+            <div className="flex justify-between items-center p-4 border-b border-zinc-200 bg-zinc-50">
+              <span className="font-bold text-zinc-900 text-xs flex items-center gap-1.5">
+                <CalendarDays size={14} className="text-strong-blue" /> Atur Tanggal
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowDatePicker(false);
+                  setDatePickerTargetRow(null);
+                }}
+                className="p-1 hover:bg-zinc-200 text-zinc-400 hover:text-zinc-800 rounded-lg cursor-pointer transition-colors"
+              >
+                <X size={14} />
+              </button>
+            </div>
+            <div className="p-4 space-y-3">
+              <div className="flex items-center justify-between gap-1 mb-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (datePickerMonth === 0) {
+                      setDatePickerMonth(11);
+                      setDatePickerYear(prev => prev - 1);
+                    } else {
+                      setDatePickerMonth(prev => prev - 1);
+                    }
+                  }}
+                  className="p-1 hover:bg-zinc-200 text-zinc-600 rounded-md cursor-pointer transition-colors"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                </button>
+                
+                <span className="font-extrabold text-zinc-700 text-xs uppercase">
+                  {[
+                    "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+                    "Juli", "Agustus", "September", "Oktober", "November", "Desember"
+                  ][datePickerMonth]} {datePickerYear}
+                </span>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (datePickerMonth === 11) {
+                      setDatePickerMonth(0);
+                      setDatePickerYear(prev => prev + 1);
+                    } else {
+                      setDatePickerMonth(prev => prev + 1);
+                    }
+                  }}
+                  className="p-1 hover:bg-zinc-200 text-zinc-600 rounded-md cursor-pointer transition-colors"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6"/></svg>
+                </button>
+              </div>
+
+              <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-bold text-zinc-400 border-b border-zinc-100 pb-1.5">
+                <div>Min</div>
+                <div>Sen</div>
+                <div>Sel</div>
+                <div>Rab</div>
+                <div>Kam</div>
+                <div>Jum</div>
+                <div>Sab</div>
+              </div>
+
+              <div className="grid grid-cols-7 gap-1 justify-items-center">
+                {Array.from({ length: new Date(datePickerYear, datePickerMonth, 1).getDay() }).map((_, idx) => (
+                  <div key={`offset-${idx}`} className="w-8 h-8"></div>
+                ))}
+
+                {Array.from({ length: new Date(datePickerYear, datePickerMonth + 1, 0).getDate() }).map((_, idx) => {
+                  const dayNum = idx + 1;
+                  const isToday = new Date().getDate() === dayNum && new Date().getMonth() === datePickerMonth && new Date().getFullYear() === datePickerYear;
+                  return (
+                    <button
+                      key={`dp-day-${dayNum}`}
+                      type="button"
+                      onClick={() => handleSelectDatePickerDate(dayNum)}
+                      className={`w-8 h-8 rounded-lg font-bold text-xs flex flex-col items-center justify-center transition-all cursor-pointer select-none active:scale-90 relative ${
+                        isToday ? "bg-mustard text-strong-blue shadow-xs border border-mustard font-black" : "bg-zinc-50 hover:bg-zinc-100 text-zinc-700 border border-zinc-200/60"
+                      }`}
+                    >
+                      <span>{dayNum}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Subject Selector Modal */}
+      {showSubjectSelector && subjectSelectorTargetRow !== null && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+          <div className="bg-white border border-zinc-200 rounded-xl w-full max-w-md shadow-2xl overflow-hidden animate-scale-up">
+            <div className="flex justify-between items-center p-4 border-b border-zinc-200 bg-zinc-50">
+              <span className="font-bold text-zinc-900 text-xs flex items-center gap-1.5">
+                <Search size={14} className="text-strong-blue" /> Cari Mata Pelajaran
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowSubjectSelector(false);
+                  setSubjectSelectorTargetRow(null);
+                }}
+                className="p-1 hover:bg-zinc-200 text-zinc-400 hover:text-zinc-800 rounded-lg cursor-pointer transition-colors"
+              >
+                <X size={14} />
+              </button>
+            </div>
+            
+            <div className="p-4 space-y-3">
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Cari mapel atau kategori..."
+                  value={subjectSearchQuery}
+                  onChange={(e) => setSubjectSearchQuery(e.target.value)}
+                  className="w-full bg-zinc-50 border border-zinc-300 rounded-lg pl-8 pr-3 py-2 text-xs text-zinc-900 focus:outline-none focus:border-strong-blue focus:ring-1 focus:ring-strong-blue"
+                />
+                <Search size={12} className="absolute left-3 top-3 text-zinc-400" />
+              </div>
+
+              <div className="max-h-[250px] overflow-y-auto border border-zinc-200 rounded-lg divide-y divide-zinc-100 bg-white">
+                {(() => {
+                  const filtered = subjects
+                    .filter((subj) => subj.jenjang === (kelas?.jenjang || "SD"))
+                    .filter((subj) => 
+                      subj.nama_mapel.toLowerCase().includes(subjectSearchQuery.toLowerCase()) ||
+                      subj.kategori.toLowerCase().includes(subjectSearchQuery.toLowerCase())
+                    );
+                  if (filtered.length === 0) {
+                    return (
+                      <div className="p-4 text-center text-xs text-zinc-500 italic">
+                        Tidak ada mata pelajaran yang cocok.
+                      </div>
+                    );
+                  }
+                  return filtered.map((subj) => (
+                    <button
+                      key={subj.id}
+                      type="button"
+                      onClick={() => handleSelectSubject(subj.id, subj.nama_mapel, subj.kategori)}
+                      className="w-full text-left px-3 py-2.5 hover:bg-zinc-50 text-xs transition-colors flex items-center justify-between cursor-pointer"
+                    >
+                      <span className="font-semibold text-zinc-900">{subj.nama_mapel}</span>
+                      <span className="text-[10px] bg-zinc-100 text-zinc-600 font-bold px-2 py-0.5 rounded-full border border-zinc-200">
+                        {subj.kategori}
+                      </span>
+                    </button>
+                  ));
+                })()}
+              </div>
+            </div>
           </div>
         </div>
       )}
