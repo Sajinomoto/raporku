@@ -66,6 +66,16 @@ interface NilasMapel {
   nama_mapel: string;
   kategori: string;
   skor: number;
+  materi: string | null;
+  kode_tentor: string | null;
+  tanggal_pembelajaran: string | null;
+}
+
+interface SubjectGrade {
+  skor: number | "";
+  materi: string;
+  kode_tentor: string;
+  tanggal_pembelajaran: string;
 }
 
 interface Kehadiran {
@@ -127,7 +137,7 @@ export default function SiswaPage() {
   const [showCalendarModal, setShowCalendarModal] = useState(false);
   const [calendarDays, setCalendarDays] = useState<Record<string, "H" | "S" | "I" | "A" | "N">>({});
   const [activeCategory, setActiveCategory] = useState<"H" | "S" | "I" | "A" | "N">("H");
-  const [academicGrades, setAcademicGrades] = useState<Record<string, number | "">>({});
+  const [academicGrades, setAcademicGrades] = useState<Record<string, SubjectGrade>>({});
   const [calendarYear, setCalendarYear] = useState<number>(new Date().getFullYear());
   const [calendarMonth, setCalendarMonth] = useState<number>(new Date().getMonth());
   const [confirmDeleteStudent, setConfirmDeleteStudent] = useState<Siswa | null>(null);
@@ -201,13 +211,18 @@ export default function SiswaPage() {
       // 3. Fetch all grades for this student
       const { data: gradesData } = await supabase
         .from("nilai")
-        .select("mapel_id, skor")
+        .select("mapel_id, skor, materi, kode_tentor, tanggal_pembelajaran")
         .eq("siswa_id", student.id);
       
-      const gradesMap: Record<string, number | ""> = {};
+      const gradesMap: Record<string, SubjectGrade> = {};
       if (gradesData) {
         gradesData.forEach((g) => {
-          gradesMap[g.mapel_id] = g.skor !== null ? Number(g.skor) : "";
+          gradesMap[g.mapel_id] = {
+            skor: g.skor !== null ? Number(g.skor) : "",
+            materi: g.materi || "",
+            kode_tentor: g.kode_tentor || "",
+            tanggal_pembelajaran: g.tanggal_pembelajaran || new Date().toISOString().split("T")[0]
+          };
         });
       }
       setAcademicGrades(gradesMap);
@@ -317,17 +332,17 @@ export default function SiswaPage() {
     setShowCalendarModal(false);
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, currentIndex: number, totalLength: number) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, prefix: string, currentIndex: number) => {
     if (e.key === "Enter" || e.key === "ArrowDown") {
       e.preventDefault();
-      const nextInput = document.getElementById(`grade-input-${currentIndex + 1}`);
+      const nextInput = document.getElementById(`${prefix}-${currentIndex + 1}`);
       if (nextInput) {
         (nextInput as HTMLInputElement).focus();
         (nextInput as HTMLInputElement).select();
       }
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
-      const prevInput = document.getElementById(`grade-input-${currentIndex - 1}`);
+      const prevInput = document.getElementById(`${prefix}-${currentIndex - 1}`);
       if (prevInput) {
         (prevInput as HTMLInputElement).focus();
         (prevInput as HTMLInputElement).select();
@@ -349,9 +364,14 @@ export default function SiswaPage() {
       );
 
       for (const subj of filteredSubjects) {
-        const score = academicGrades[subj.id];
+        const scoreObj = academicGrades[subj.id];
         
-        if (score !== undefined) {
+        if (scoreObj !== undefined) {
+          const score = scoreObj.skor;
+          const materi = scoreObj.materi;
+          const kodeTentor = scoreObj.kode_tentor;
+          const tanggal = scoreObj.tanggal_pembelajaran;
+
           if (score !== "" && (Number(score) < 0 || Number(score) > 100)) {
             throw new Error("Skor nilai harus berada dalam rentang 0 sampai 100.");
           }
@@ -364,8 +384,8 @@ export default function SiswaPage() {
             .maybeSingle();
 
           if (existingGrade) {
-            if (score === "") {
-              // Delete score if cleared
+            if (score === "" && materi === "" && kodeTentor === "") {
+              // Delete score if everything is cleared
               const { error } = await supabase
                 .from("nilai")
                 .delete()
@@ -374,17 +394,25 @@ export default function SiswaPage() {
             } else {
               const { error } = await supabase
                 .from("nilai")
-                .update({ skor: Number(score) })
+                .update({ 
+                  skor: score !== "" ? Number(score) : null,
+                  materi: materi || null,
+                  kode_tentor: kodeTentor || null,
+                  tanggal_pembelajaran: tanggal || null
+                })
                 .eq("id", existingGrade.id);
               if (error) throw error;
             }
-          } else if (score !== "") {
+          } else if (score !== "" || materi !== "" || kodeTentor !== "") {
             const { error } = await supabase
               .from("nilai")
               .insert({
                 siswa_id: selectedStudent.id,
                 mapel_id: subj.id,
-                skor: Number(score),
+                skor: score !== "" ? Number(score) : null,
+                materi: materi || null,
+                kode_tentor: kodeTentor || null,
+                tanggal_pembelajaran: tanggal || null
               });
             if (error) throw error;
           }
@@ -521,6 +549,9 @@ export default function SiswaPage() {
             id,
             skor,
             mapel_id,
+            materi,
+            kode_tentor,
+            tanggal_pembelajaran,
             mata_pelajaran (nama_mapel, kategori)
           `)
           .eq("siswa_id", student.id),
@@ -545,6 +576,9 @@ export default function SiswaPage() {
         skor: Number(g.skor),
         nama_mapel: g.mata_pelajaran?.nama_mapel || "Mata Pelajaran",
         kategori: g.mata_pelajaran?.kategori || "Wajib",
+        materi: g.materi || null,
+        kode_tentor: g.kode_tentor || null,
+        tanggal_pembelajaran: g.tanggal_pembelajaran || null,
       }));
       setStudentGrades(formattedGrades);
 
@@ -1462,33 +1496,103 @@ export default function SiswaPage() {
                                 <thead className="bg-zinc-100 text-zinc-700 font-bold border-b border-zinc-200 sticky top-0 z-10 shadow-xs">
                                   <tr>
                                     <th className="px-4 py-2.5 w-12 text-center">No</th>
-                                    <th className="px-4 py-2.5">Nama Mata Pelajaran</th>
-                                    <th className="px-4 py-2.5 w-32">Kategori</th>
-                                    <th className="px-4 py-2.5 w-40 text-center">Skor Nilai (0-100)</th>
+                                    <th className="px-4 py-2.5 min-w-[200px]">Nama Mata Pelajaran</th>
+                                    <th className="px-4 py-2.5 min-w-[150px]">Materi Pembelajaran</th>
+                                    <th className="px-4 py-2.5 w-28 text-center">Kode Tentor</th>
+                                    <th className="px-4 py-2.5 w-40 text-center">Tanggal</th>
+                                    <th className="px-4 py-2.5 w-28 text-center">Skor (0-100)</th>
                                   </tr>
                                 </thead>
                                 <tbody className="divide-y divide-zinc-200">
                                   {filteredSubjects.map((subj, idx) => {
-                                    const score = academicGrades[subj.id] ?? "";
+                                    const scoreObj = academicGrades[subj.id] || {
+                                      skor: "",
+                                      materi: "",
+                                      kode_tentor: "",
+                                      tanggal_pembelajaran: new Date().toISOString().split("T")[0]
+                                    };
                                     return (
                                       <tr key={subj.id} className="hover:bg-zinc-50/50">
                                         <td className="px-4 py-2 text-center font-bold text-zinc-400">{idx + 1}</td>
-                                        <td className="px-4 py-2 font-semibold text-zinc-900">{subj.nama_mapel}</td>
-                                        <td className="px-4 py-2 text-zinc-500 font-medium">{subj.kategori}</td>
+                                        <td className="px-4 py-2 font-semibold text-zinc-900">
+                                          {subj.nama_mapel} <span className="text-[10px] text-zinc-400 font-medium font-sans">({subj.kategori})</span>
+                                        </td>
                                         <td className="px-4 py-2">
                                           <input
-                                            id={`grade-input-${idx}`}
+                                            id={`grade-materi-${idx}`}
+                                            type="text"
+                                            placeholder="Bab/Materi..."
+                                            value={scoreObj.materi}
+                                            onChange={(e) => {
+                                              setAcademicGrades(prev => ({
+                                                ...prev,
+                                                [subj.id]: {
+                                                  ...(prev[subj.id] || { skor: "", materi: "", kode_tentor: "", tanggal_pembelajaran: new Date().toISOString().split("T")[0] }),
+                                                  materi: e.target.value
+                                                }
+                                              }));
+                                            }}
+                                            onKeyDown={(e) => handleKeyDown(e, 'grade-materi', idx)}
+                                            className="w-full bg-zinc-50 focus:bg-white border border-zinc-200 focus:border-strong-blue rounded-lg px-2.5 py-1 text-xs text-zinc-900 focus:outline-none transition-colors focus:ring-1 focus:ring-strong-blue"
+                                          />
+                                        </td>
+                                        <td className="px-4 py-2">
+                                          <input
+                                            id={`grade-tentor-${idx}`}
+                                            type="text"
+                                            placeholder="Kode..."
+                                            value={scoreObj.kode_tentor}
+                                            onChange={(e) => {
+                                              setAcademicGrades(prev => ({
+                                                ...prev,
+                                                [subj.id]: {
+                                                  ...(prev[subj.id] || { skor: "", materi: "", kode_tentor: "", tanggal_pembelajaran: new Date().toISOString().split("T")[0] }),
+                                                  kode_tentor: e.target.value
+                                                }
+                                              }));
+                                            }}
+                                            onKeyDown={(e) => handleKeyDown(e, 'grade-tentor', idx)}
+                                            className="w-full text-center bg-zinc-50 focus:bg-white border border-zinc-200 focus:border-strong-blue rounded-lg px-2.5 py-1 text-xs text-zinc-900 focus:outline-none transition-colors font-mono focus:ring-1 focus:ring-strong-blue"
+                                          />
+                                        </td>
+                                        <td className="px-4 py-2">
+                                          <input
+                                            id={`grade-tanggal-${idx}`}
+                                            type="date"
+                                            value={scoreObj.tanggal_pembelajaran}
+                                            onChange={(e) => {
+                                              setAcademicGrades(prev => ({
+                                                ...prev,
+                                                [subj.id]: {
+                                                  ...(prev[subj.id] || { skor: "", materi: "", kode_tentor: "", tanggal_pembelajaran: new Date().toISOString().split("T")[0] }),
+                                                  tanggal_pembelajaran: e.target.value
+                                                }
+                                              }));
+                                            }}
+                                            onKeyDown={(e) => handleKeyDown(e, 'grade-tanggal', idx)}
+                                            className="w-full text-center bg-zinc-50 focus:bg-white border border-zinc-200 focus:border-strong-blue rounded-lg px-2 py-1 text-xs text-zinc-900 focus:outline-none transition-colors font-mono focus:ring-1 focus:ring-strong-blue"
+                                          />
+                                        </td>
+                                        <td className="px-4 py-2">
+                                          <input
+                                            id={`grade-skor-${idx}`}
                                             type="number"
                                             min={0}
                                             max={100}
-                                            placeholder="Belum dinilai"
-                                            value={score}
+                                            placeholder="-"
+                                            value={scoreObj.skor}
                                             onChange={(e) => {
                                               const val = e.target.value === "" ? "" : Number(e.target.value);
-                                              setAcademicGrades(prev => ({ ...prev, [subj.id]: val }));
+                                              setAcademicGrades(prev => ({
+                                                ...prev,
+                                                [subj.id]: {
+                                                  ...(prev[subj.id] || { skor: "", materi: "", kode_tentor: "", tanggal_pembelajaran: new Date().toISOString().split("T")[0] }),
+                                                  skor: val
+                                                }
+                                              }));
                                             }}
-                                            onKeyDown={(e) => handleKeyDown(e, idx, filteredSubjects.length)}
-                                            className="w-full text-center bg-zinc-50 focus:bg-white border border-zinc-200 focus:border-strong-blue rounded-lg px-3 py-1.5 text-xs text-zinc-900 focus:outline-none transition-colors font-bold font-mono focus:ring-1 focus:ring-strong-blue"
+                                            onKeyDown={(e) => handleKeyDown(e, 'grade-skor', idx)}
+                                            className="w-full text-center bg-zinc-50 focus:bg-white border border-zinc-200 focus:border-strong-blue rounded-lg px-2.5 py-1 text-xs text-zinc-900 focus:outline-none transition-colors font-bold font-mono focus:ring-1 focus:ring-strong-blue"
                                           />
                                         </td>
                                       </tr>
@@ -1821,21 +1925,29 @@ export default function SiswaPage() {
                             <thead>
                               <tr className="border-b border-zinc-200 print-border">
                                 <th className="py-2 text-left">Mata Pelajaran</th>
-                                <th className="py-2">Kategori</th>
-                                <th className="py-2 text-right">Skor</th>
+                                <th className="py-2 text-left">Materi</th>
+                                <th className="py-2 text-center w-24">Tentor</th>
+                                <th className="py-2 text-center w-28">Tanggal</th>
+                                <th className="py-2 text-right w-16">Skor</th>
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-zinc-200 print-border">
                               {studentGrades.map((g) => (
                                 <tr key={g.id}>
-                                  <td className="py-2 font-medium text-zinc-800 print-text">{g.nama_mapel}</td>
-                                  <td className="py-2">{g.kategori}</td>
+                                  <td className="py-2 font-medium text-zinc-800 print-text">
+                                    {g.nama_mapel} <span className="text-[10px] text-zinc-400 font-medium">({g.kategori})</span>
+                                  </td>
+                                  <td className="py-2 italic text-zinc-500">{g.materi || "-"}</td>
+                                  <td className="py-2 text-center text-zinc-500 font-mono">{g.kode_tentor || "-"}</td>
+                                  <td className="py-2 text-center text-zinc-500 font-mono">
+                                    {g.tanggal_pembelajaran ? new Date(g.tanggal_pembelajaran).toLocaleDateString("id-ID", { day: '2-digit', month: 'short', year: 'numeric' }) : "-"}
+                                  </td>
                                   <td className="py-2 text-right font-bold text-strong-blue print-text">{g.skor}</td>
                                 </tr>
                               ))}
                               {studentGrades.length === 0 && (
                                 <tr>
-                                  <td colSpan={3} className="py-4 text-center text-zinc-500 italic">Belum ada nilai terinput.</td>
+                                  <td colSpan={5} className="py-4 text-center text-zinc-500 italic">Belum ada nilai terinput.</td>
                                 </tr>
                               )}
                             </tbody>
