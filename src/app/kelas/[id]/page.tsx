@@ -1059,7 +1059,7 @@ export default function ClassDetailPage({ params }: { params: Promise<{ id: stri
       {/* Input Nilai & Kehadiran Modal */}
       {showInputModal && modalStudent && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
-          <div className="bg-white border border-zinc-200 rounded-xl w-full max-w-4xl shadow-2xl overflow-hidden animate-scale-up">
+          <div className="bg-white border border-zinc-200 rounded-xl w-full max-w-5xl shadow-2xl overflow-hidden animate-scale-up">
             <div className="flex justify-between items-center p-5 border-b border-zinc-200">
               <div>
                 <h3 className="font-bold text-zinc-900 text-base">Input Nilai & Kehadiran</h3>
@@ -1104,7 +1104,7 @@ export default function ClassDetailPage({ params }: { params: Promise<{ id: stri
                       );
                     }
                     return (
-                      <div className="border border-zinc-200 rounded-xl overflow-hidden bg-white shadow-xs max-h-[300px] overflow-y-auto">
+                      <div className="border border-zinc-200 rounded-xl overflow-hidden bg-white shadow-xs">
                         <table className="w-full text-left text-xs text-zinc-600">
                           <thead className="bg-zinc-100 text-zinc-700 font-bold border-b border-zinc-200 sticky top-0 z-10 shadow-xs">
                             <tr>

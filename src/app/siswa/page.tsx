@@ -1457,7 +1457,7 @@ export default function SiswaPage() {
                             );
                           }
                           return (
-                            <div className="border border-zinc-200 rounded-xl overflow-hidden bg-white shadow-xs max-h-[300px] overflow-y-auto">
+                            <div className="border border-zinc-200 rounded-xl overflow-hidden bg-white shadow-xs">
                               <table className="w-full text-left text-xs text-zinc-600">
                                 <thead className="bg-zinc-100 text-zinc-700 font-bold border-b border-zinc-200 sticky top-0 z-10 shadow-xs">
                                   <tr>
