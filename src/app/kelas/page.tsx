@@ -182,7 +182,7 @@ export default function KelasPage() {
           {classes.map((kelas) => (
             <div
               key={kelas.id}
-              className="bg-white border border-zinc-200 rounded-xl p-5 hover:border-strong-blue/30 shadow-sm hover:shadow-lg hover:-translate-y-1 active:scale-[0.99] transition-all duration-300 relative group flex flex-col justify-between h-[170px] cursor-pointer"
+              className="bg-white border border-zinc-200 rounded-xl p-5 pb-6 hover:border-strong-blue/30 shadow-sm hover:shadow-lg hover:-translate-y-1 active:scale-[0.99] transition-all duration-300 relative group flex flex-col justify-between min-h-[180px] cursor-pointer"
             >
               <Link href={`/kelas/${kelas.id}`} className="absolute inset-0 z-0 rounded-xl" />
               
