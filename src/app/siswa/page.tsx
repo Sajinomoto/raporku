@@ -153,6 +153,9 @@ export default function SiswaPage() {
   const [activeCategory, setActiveCategory] = useState<"H" | "S" | "I" | "A" | "N">("H");
   const [academicGrades, setAcademicGrades] = useState<{ rows: AcademicRow[] }>({ rows: [] });
   const [deletedGradeIds, setDeletedGradeIds] = useState<string[]>([]);
+  const [showImportExcelModal, setShowImportExcelModal] = useState(false);
+  const [excelFile, setExcelFile] = useState<File | null>(null);
+  const [isDraggingExcel, setIsDraggingExcel] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [datePickerTargetRow, setDatePickerTargetRow] = useState<number | null>(null);
   const [datePickerMonth, setDatePickerMonth] = useState(new Date().getMonth());
@@ -412,6 +415,37 @@ export default function SiswaPage() {
     setDatePickerMonth(initialDate.getMonth());
     setDatePickerYear(initialDate.getFullYear());
     setShowDatePicker(true);
+  };
+
+  const handleExcelDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDraggingExcel(true);
+  };
+
+  const handleExcelDragLeave = () => {
+    setIsDraggingExcel(false);
+  };
+
+  const handleExcelDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDraggingExcel(false);
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      const file = files[0];
+      if (file.name.endsWith(".xlsx") || file.name.endsWith(".xls")) {
+        setExcelFile(file);
+      } else {
+        alert("Mohon masukkan file Excel (.xlsx atau .xls).");
+      }
+    }
+  };
+
+  const handleExcelFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      const file = files[0];
+      setExcelFile(file);
+    }
   };
 
   const handleSelectDatePickerDate = (day: number) => {
@@ -1597,9 +1631,18 @@ export default function SiswaPage() {
                     <div className="space-y-4">
                       {/* Academic Section */}
                       <div className="space-y-4 bg-zinc-50/50 p-4 rounded-xl border border-zinc-100">
-                        <h4 className="font-bold text-strong-blue text-xs border-b border-zinc-200 pb-2 flex items-center gap-2">
-                          <FileSpreadsheet size={14} /> Nilai Akademik
-                        </h4>
+                        <div className="border-b border-zinc-200 pb-2 flex justify-between items-center">
+                          <h4 className="font-bold text-strong-blue text-xs flex items-center gap-2">
+                            <FileSpreadsheet size={14} /> Nilai Akademik
+                          </h4>
+                          <button
+                            type="button"
+                            onClick={() => setShowImportExcelModal(true)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-[10px] transition-colors cursor-pointer shadow-xs uppercase tracking-wider"
+                          >
+                            <Upload size={12} /> Impor Excel
+                          </button>
+                        </div>
                         
                         <div className="border border-zinc-200 rounded-xl overflow-hidden bg-white shadow-xs">
                           <table className="w-full text-left text-xs text-zinc-600">
@@ -2355,6 +2398,107 @@ export default function SiswaPage() {
                 height={500}
                 className="max-w-full max-h-[70vh] rounded-2xl object-contain shadow-inner"
               />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Import Excel Modal (UI Preview Only) */}
+      {showImportExcelModal && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+          <div className="bg-white border border-zinc-200 rounded-xl w-full max-w-lg shadow-2xl overflow-hidden animate-scale-up">
+            <div className="flex justify-between items-center p-4 border-b border-zinc-200 bg-zinc-50">
+              <span className="font-bold text-zinc-900 text-xs flex items-center gap-1.5 uppercase tracking-wider">
+                <Upload size={14} className="text-emerald-600" /> Impor Data Nilai Excel
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowImportExcelModal(false);
+                  setExcelFile(null);
+                }}
+                className="p-1 hover:bg-zinc-200 text-zinc-400 hover:text-zinc-800 rounded-lg cursor-pointer transition-colors"
+              >
+                <X size={14} />
+              </button>
+            </div>
+            
+            <div className="p-5 space-y-4">
+              <p className="text-[11px] text-zinc-500 font-medium leading-relaxed">
+                Silakan unggah file Excel Anda. Sistem akan memparsing data dari spreadsheet dan mencocokkan kolom secara otomatis pada langkah berikutnya.
+              </p>
+
+              {/* Drag and Drop Zone */}
+              <div
+                onDragOver={handleExcelDragOver}
+                onDragLeave={handleExcelDragLeave}
+                onDrop={handleExcelDrop}
+                onClick={() => document.getElementById("excel-file-input")?.click()}
+                className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all duration-300 flex flex-col items-center justify-center gap-2 group ${
+                  isDraggingExcel
+                    ? "border-emerald-500 bg-emerald-50"
+                    : excelFile
+                    ? "border-emerald-500/55 bg-zinc-50/50"
+                    : "border-zinc-300 hover:border-emerald-500 hover:bg-zinc-50/30"
+                }`}
+              >
+                <input
+                  id="excel-file-input"
+                  type="file"
+                  accept=".xlsx, .xls"
+                  onChange={handleExcelFileChange}
+                  className="hidden"
+                />
+                
+                <div className={`p-3 rounded-full transition-colors ${
+                  excelFile ? "bg-emerald-100 text-emerald-600" : "bg-zinc-100 text-zinc-400 group-hover:bg-emerald-50 group-hover:text-emerald-500"
+                }`}>
+                  <Upload size={24} />
+                </div>
+                
+                {excelFile ? (
+                  <div className="space-y-1">
+                    <p className="text-xs font-bold text-emerald-600 truncate max-w-xs mx-auto">{excelFile.name}</p>
+                    <p className="text-[10px] text-zinc-400">{(excelFile.size / 1024).toFixed(1)} KB</p>
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    <p className="text-xs font-bold text-zinc-700">Seret file Excel ke sini</p>
+                    <p className="text-[10px] text-zinc-400">atau klik untuk menelusuri berkas (.xlsx, .xls)</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Guide Alert Box */}
+              <div className="p-3 bg-zinc-50 border border-zinc-200 rounded-lg text-[10px] text-zinc-500 leading-relaxed space-y-1 font-medium">
+                <span className="font-bold text-zinc-700 block">💡 Panduan Impor:</span>
+                <p>Sistem mendukung pembacaan nama kolom dinamis. Pastikan data di Excel Anda berisi kolom untuk **Tanggal**, **Jam**, **Mata Pelajaran**, **Materi**, dan **Kode Tentor**.</p>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 p-4 border-t border-zinc-100 bg-zinc-50">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowImportExcelModal(false);
+                  setExcelFile(null);
+                }}
+                className="px-4 py-2 hover:bg-zinc-200 text-zinc-600 rounded-lg text-xs font-bold cursor-pointer transition-colors"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                disabled={!excelFile}
+                onClick={() => {
+                  alert("Fitur parser & penyalinan otomatis dari Excel akan diimplementasikan pada tahap selanjutnya!");
+                  setShowImportExcelModal(false);
+                  setExcelFile(null);
+                }}
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-zinc-200 disabled:text-zinc-400 text-white font-bold rounded-lg text-xs cursor-pointer shadow-xs disabled:cursor-not-allowed transition-all"
+              >
+                Lanjutkan Impor
+              </button>
             </div>
           </div>
         </div>
