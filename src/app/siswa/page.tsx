@@ -527,6 +527,10 @@ export default function SiswaPage() {
 
       // 3. Refresh data
       fetchStudents();
+      if (selectedStudent) {
+        openInputInline(selectedStudent);
+        fetchStudentReportData(selectedStudent);
+      }
 
       // 4. Show result summary
       const summary = [
