@@ -456,26 +456,31 @@ export async function bulkInsertGrades(
   onProgress?: (inserted: number, total: number) => void
 ): Promise<{ inserted: number; errors: string[] }> {
   const result = { inserted: 0, errors: [] as string[] };
+  const batchSize = 100;
 
-  for (let i = 0; i < data.length; i++) {
-    const item = data[i];
-    const payload = {
+  // Gunakan INSERT biasa (bukan upsert) karena:
+  // - UNIQUE constraint (siswa_id, mapel_id) sudah dihapus
+  // - Kita MAU multiple scores untuk mapel yang sama
+  // - Setiap baris Excel = row baru di tabel nilai
+  for (let i = 0; i < data.length; i += batchSize) {
+    const batch = data.slice(i, i + batchSize);
+    
+    const payload = batch.map((item) => ({
       siswa_id: item.siswa_id,
       mapel_id: item.mapel_id,
       skor: item.skor,
       materi: item.materi || null,
       tanggal_pembelajaran: item.tanggal || null,
-    };
+    }));
 
-    // Panggil upsert langsung agar tidak ada HTTP 409 Conflict di Console
-    const { error: upsertError } = await supabaseClient
+    const { error } = await supabaseClient
       .from("nilai")
-      .upsert(payload, { onConflict: "siswa_id,mapel_id" });
+      .insert(payload);
 
-    if (upsertError) {
-      result.errors.push(`Baris ${i + 1}: ${upsertError.message}`);
+    if (error) {
+      result.errors.push(`Batch ${Math.floor(i / batchSize) + 1}: ${error.message}`);
     } else {
-      result.inserted += 1;
+      result.inserted += batch.length;
     }
 
     if (onProgress) {
