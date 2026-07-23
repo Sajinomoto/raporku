@@ -456,24 +456,32 @@ export async function bulkInsertGrades(
   onProgress?: (inserted: number, total: number) => void
 ): Promise<{ inserted: number; errors: string[] }> {
   const result = { inserted: 0, errors: [] as string[] };
-  const batchSize = 100;
 
-  for (let i = 0; i < data.length; i += batchSize) {
-    const batch = data.slice(i, i + batchSize);
-    const payload = batch.map((d) => ({
-      siswa_id: d.siswa_id,
-      mapel_id: d.mapel_id,
-      skor: d.skor,
-      materi: d.materi || null,
-      tanggal_pembelajaran: d.tanggal || null,
-    }));
+  for (let i = 0; i < data.length; i++) {
+    const item = data[i];
+    const payload = {
+      siswa_id: item.siswa_id,
+      mapel_id: item.mapel_id,
+      skor: item.skor,
+      materi: item.materi || null,
+      tanggal_pembelajaran: item.tanggal || null,
+    };
 
-    const { error } = await supabaseClient.from("nilai").insert(payload);
+    // 1. Coba upsert per item
+    const { error: upsertError } = await supabaseClient
+      .from("nilai")
+      .upsert(payload, { onConflict: "siswa_id,mapel_id" });
 
-    if (error) {
-      result.errors.push(`Batch ${Math.floor(i / batchSize) + 1}: ${error.message}`);
+    if (upsertError) {
+      // 2. Fallback ke insert jika upsert tidak berlaku
+      const { error: insertError } = await supabaseClient.from("nilai").insert(payload);
+      if (insertError) {
+        result.errors.push(`Baris ${i + 1}: ${insertError.message}`);
+      } else {
+        result.inserted += 1;
+      }
     } else {
-      result.inserted += batch.length;
+      result.inserted += 1;
     }
 
     if (onProgress) {

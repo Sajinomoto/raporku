@@ -1222,10 +1222,8 @@ export default function SiswaPage() {
       max: 100,
       tickAmount: 5,
       labels: {
-        style: {
-          fontSize: "8px",
-          fontWeight: 600,
-          colors: "#94a3b8"
+        formatter: function(val: number) {
+          return Math.round(val).toString();
         }
       }
     },
