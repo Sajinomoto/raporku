@@ -467,20 +467,13 @@ export async function bulkInsertGrades(
       tanggal_pembelajaran: item.tanggal || null,
     };
 
-    // 1. Coba jalankan insert murni
-    const { error: insertError } = await supabaseClient.from("nilai").insert(payload);
+    // Panggil upsert langsung agar tidak ada HTTP 409 Conflict di Console
+    const { error: upsertError } = await supabaseClient
+      .from("nilai")
+      .upsert(payload, { onConflict: "siswa_id,mapel_id" });
 
-    if (insertError) {
-      // 2. Jika bentrok unique constraint (409 Conflict), lakukan upsert agar setidaknya nilai tersimpan tanpa crash
-      const { error: upsertError } = await supabaseClient
-        .from("nilai")
-        .upsert(payload, { onConflict: "siswa_id,mapel_id" });
-
-      if (upsertError) {
-        result.errors.push(`Baris ${i + 1}: ${upsertError.message}`);
-      } else {
-        result.inserted += 1;
-      }
+    if (upsertError) {
+      result.errors.push(`Baris ${i + 1}: ${upsertError.message}`);
     } else {
       result.inserted += 1;
     }
