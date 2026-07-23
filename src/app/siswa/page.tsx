@@ -1188,7 +1188,7 @@ export default function SiswaPage() {
       labels: {
         style: {
           fontWeight: 600,
-          colors: "#475569"
+          colors: ["#475569"]
         }
       }
     },
@@ -1196,7 +1196,7 @@ export default function SiswaPage() {
       labels: {
         style: {
           fontWeight: 600,
-          colors: "#475569"
+          colors: ["#475569"]
         }
       }
     },
