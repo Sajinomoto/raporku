@@ -3,6 +3,7 @@
 import { use, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { parseGradeExcel, validateAndMapRows, bulkInsertGrades, downloadTemplate, type ExcelGradeRow } from "@/lib/excel-parser";
 import { 
   Layers, 
   Plus, 
@@ -122,9 +123,20 @@ export default function ClassDetailPage({ params }: { params: Promise<{ id: stri
   const [classList, setClassList] = useState<Kelas[]>([]);
   const [academicGrades, setAcademicGrades] = useState<{ rows: AcademicRow[] }>({ rows: [] });
   const [deletedGradeIds, setDeletedGradeIds] = useState<string[]>([]);
+  // Import Excel states
   const [showImportExcelModal, setShowImportExcelModal] = useState(false);
   const [excelFile, setExcelFile] = useState<File | null>(null);
   const [isDraggingExcel, setIsDraggingExcel] = useState(false);
+  const [importStep, setImportStep] = useState<"upload" | "preview" | "saving">("upload");
+  const [parsedRows, setParsedRows] = useState<ExcelGradeRow[]>([]);
+  const [previewRows, setPreviewRows] = useState<ExcelGradeRow[]>([]);
+  const [mappedData, setMappedData] = useState<{
+    valid: Array<{ siswa_id: string; mapel_id: string; tanggal: string; materi: string; skor: number }>;
+    errors: Array<{ rowIndex: number; nis: string; reason: string }>;
+  }>({ valid: [], errors: [] });
+  const [importErrors, setImportErrors] = useState<string[]>([]);
+  const [importSaving, setImportSaving] = useState(false);
+  const [importProgress, setImportProgress] = useState({ inserted: 0, total: 0 });
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [datePickerTargetRow, setDatePickerTargetRow] = useState<number | null>(null);
   const [datePickerMonth, setDatePickerMonth] = useState(new Date().getMonth());
@@ -206,6 +218,8 @@ export default function ClassDetailPage({ params }: { params: Promise<{ id: stri
     setShowDatePicker(true);
   };
 
+  // ========== Excel Import Handlers ==========
+
   const handleExcelDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDraggingExcel(true);
@@ -223,6 +237,7 @@ export default function ClassDetailPage({ params }: { params: Promise<{ id: stri
       const file = files[0];
       if (file.name.endsWith(".xlsx") || file.name.endsWith(".xls")) {
         setExcelFile(file);
+        setImportStep("upload");
       } else {
         alert("Mohon masukkan file Excel (.xlsx atau .xls).");
       }
@@ -234,7 +249,119 @@ export default function ClassDetailPage({ params }: { params: Promise<{ id: stri
     if (files && files.length > 0) {
       const file = files[0];
       setExcelFile(file);
+      setImportStep("upload");
     }
+  };
+
+  const handleParseExcel = async () => {
+    if (!excelFile) return;
+    setImportErrors([]);
+    setMappedData({ valid: [], errors: [] });
+    
+    try {
+      const parseResult = await parseGradeExcel(excelFile);
+      
+      if (parseResult.rows.length === 0) {
+        setImportErrors([
+          ...parseResult.errors.map(e => `Baris ${e.row}: ${e.reason}`),
+          "Tidak ada data valid yang ditemukan."
+        ]);
+        return;
+      }
+
+      setParsedRows(parseResult.rows);
+      setPreviewRows(parseResult.rows.slice(0, 5));
+      
+      // Collect parsing errors (non-critical)
+      const errMsgs = parseResult.errors.map(e => `Baris ${e.row}: ${e.reason}`);
+      setImportErrors(errMsgs);
+      
+      // Move to preview step
+      setImportStep("preview");
+    } catch (err) {
+      setImportErrors([`Gagal memparse file: ${err instanceof Error ? err.message : "Unknown error"}`]);
+    }
+  };
+
+  const handleValidateAndSave = async () => {
+    if (parsedRows.length === 0) return;
+    
+    setImportSaving(true);
+    setImportErrors([]);
+    setImportProgress({ inserted: 0, total: parsedRows.length });
+    setImportStep("saving");
+
+    try {
+      // 1. Validate and map NIS → siswa_id, mapel → mapel_id
+      const mapping = await validateAndMapRows(parsedRows, supabase, classId);
+      setMappedData(mapping);
+
+      if (mapping.valid.length === 0) {
+        setImportErrors([
+          ...mapping.errors.map(e => `NIS "${e.nis}": ${e.reason}`),
+          "Tidak ada data valid untuk disimpan."
+        ]);
+        setImportSaving(false);
+        return;
+      }
+
+      // 2. Bulk insert only valid data
+      const saveResult = await bulkInsertGrades(
+        supabase,
+        mapping.valid,
+        (inserted, total) => {
+          setImportProgress({ inserted, total });
+        }
+      );
+
+      // 3. Refresh class data
+      fetchClassData();
+      fetchClassDetails();
+
+      // 4. Show result summary
+      const summary = [
+        `✓ Berhasil: ${saveResult.inserted} data nilai diimport`,
+      ];
+      if (mapping.errors.length > 0) {
+        summary.push(`✗ Gagal: ${mapping.errors.length} data (siswa/mapel tidak ditemukan)`);
+      }
+      if (saveResult.errors.length > 0) {
+        summary.push(`⚠ Error database: ${saveResult.errors.length} batch`);
+      }
+      setImportErrors(summary);
+      
+      // Auto close after 3 seconds on success
+      setTimeout(() => {
+        setShowImportExcelModal(false);
+        setExcelFile(null);
+        setParsedRows([]);
+        setPreviewRows([]);
+        setMappedData({ valid: [], errors: [] });
+        setImportStep("upload");
+        setImportErrors([]);
+        setImportProgress({ inserted: 0, total: 0 });
+      }, saveResult.errors.length > 0 ? 5000 : 2500);
+      
+    } catch (err) {
+      setImportErrors([`Error: ${err instanceof Error ? err.message : "Unknown error"}`]);
+    } finally {
+      setImportSaving(false);
+    }
+  };
+
+  const handleResetImport = () => {
+    setExcelFile(null);
+    setParsedRows([]);
+    setPreviewRows([]);
+    setMappedData({ valid: [], errors: [] });
+    setImportStep("upload");
+    setImportErrors([]);
+    setImportProgress({ inserted: 0, total: 0 });
+  };
+
+  const handleCloseImportModal = () => {
+    setShowImportExcelModal(false);
+    handleResetImport();
   };
 
   const handleSelectDatePickerDate = (day: number) => {
@@ -1545,102 +1672,301 @@ export default function ClassDetailPage({ params }: { params: Promise<{ id: stri
         </div>
       )}
 
-      {/* Import Excel Modal (UI Preview Only) */}
+      {/* ===== IMPORT EXCEL MODAL (Multi-step) ===== */}
       {showImportExcelModal && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
           <div className="bg-white border border-zinc-200 rounded-xl w-full max-w-lg shadow-2xl overflow-hidden animate-scale-up">
+            {/* Header */}
             <div className="flex justify-between items-center p-4 border-b border-zinc-200 bg-zinc-50">
               <span className="font-bold text-zinc-900 text-xs flex items-center gap-1.5 uppercase tracking-wider">
                 <Upload size={14} className="text-emerald-600" /> Impor Data Nilai Excel
               </span>
               <button
                 type="button"
-                onClick={() => {
-                  setShowImportExcelModal(false);
-                  setExcelFile(null);
-                }}
-                className="p-1 hover:bg-zinc-200 text-zinc-400 hover:text-zinc-800 rounded-lg cursor-pointer transition-colors"
+                onClick={handleCloseImportModal}
+                disabled={importSaving}
+                className="p-1 hover:bg-zinc-200 text-zinc-400 hover:text-zinc-800 rounded-lg cursor-pointer transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
               >
                 <X size={14} />
               </button>
             </div>
-            
-            <div className="p-5 space-y-4">
-              <p className="text-[11px] text-zinc-500 font-medium leading-relaxed">
-                Silakan unggah file Excel Anda. Sistem akan memparsing data dari spreadsheet dan mencocokkan kolom secara otomatis pada langkah berikutnya.
-              </p>
 
-              {/* Drag and Drop Zone */}
-              <div
-                onDragOver={handleExcelDragOver}
-                onDragLeave={handleExcelDragLeave}
-                onDrop={handleExcelDrop}
-                onClick={() => document.getElementById("excel-file-input")?.click()}
-                className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all duration-300 flex flex-col items-center justify-center gap-2 group ${
-                  isDraggingExcel
-                    ? "border-emerald-500 bg-emerald-50"
-                    : excelFile
-                    ? "border-emerald-500/55 bg-zinc-50/50"
-                    : "border-zinc-300 hover:border-emerald-500 hover:bg-zinc-50/30"
-                }`}
-              >
-                <input
-                  id="excel-file-input"
-                  type="file"
-                  accept=".xlsx, .xls"
-                  onChange={handleExcelFileChange}
-                  className="hidden"
-                />
-                
-                <div className={`p-3 rounded-full transition-colors ${
-                  excelFile ? "bg-emerald-100 text-emerald-600" : "bg-zinc-100 text-zinc-400 group-hover:bg-emerald-50 group-hover:text-emerald-500"
-                }`}>
-                  <Upload size={24} />
-                </div>
-                
-                {excelFile ? (
-                  <div className="space-y-1">
-                    <p className="text-xs font-bold text-emerald-600 truncate max-w-xs mx-auto">{excelFile.name}</p>
-                    <p className="text-[10px] text-zinc-400">{(excelFile.size / 1024).toFixed(1)} KB</p>
-                  </div>
-                ) : (
-                  <div className="space-y-1">
-                    <p className="text-xs font-bold text-zinc-700">Seret file Excel ke sini</p>
-                    <p className="text-[10px] text-zinc-400">atau klik untuk menelusuri berkas (.xlsx, .xls)</p>
-                  </div>
-                )}
+            {/* Step Indicator */}
+            <div className="flex items-center gap-2 px-5 pt-4 pb-2">
+              <div className={`flex items-center gap-1.5 ${importStep === "upload" ? "text-emerald-600" : "text-zinc-400"}`}>
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                  importStep === "upload" ? "bg-emerald-100 text-emerald-700" : "bg-zinc-100 text-zinc-500"
+                }`}>1</div>
+                <span className="text-[10px] font-bold">Upload</span>
               </div>
-
-              {/* Guide Alert Box */}
-              <div className="p-3 bg-zinc-50 border border-zinc-200 rounded-lg text-[10px] text-zinc-500 leading-relaxed space-y-1 font-medium">
-                <span className="font-bold text-zinc-700 block">💡 Panduan Impor:</span>
-                <p>Sistem mendukung pembacaan nama kolom dinamis. Pastikan data di Excel Anda berisi kolom untuk **Tanggal**, **Jam**, **Mata Pelajaran**, **Materi**, dan **Kode Tentor**.</p>
+              <div className="flex-1 h-px bg-zinc-200" />
+              <div className={`flex items-center gap-1.5 ${importStep === "preview" ? "text-emerald-600" : "text-zinc-400"}`}>
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                  importStep === "preview" ? "bg-emerald-100 text-emerald-700" : importStep === "saving" ? "bg-strong-blue/10 text-strong-blue" : "bg-zinc-100 text-zinc-500"
+                }`}>2</div>
+                <span className="text-[10px] font-bold">Preview</span>
+              </div>
+              <div className="flex-1 h-px bg-zinc-200" />
+              <div className={`flex items-center gap-1.5 ${importStep === "saving" ? "text-emerald-600" : "text-zinc-400"}`}>
+                <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                  importStep === "saving" ? "bg-emerald-100 text-emerald-700" : "bg-zinc-100 text-zinc-500"
+                }`}>3</div>
+                <span className="text-[10px] font-bold">Simpan</span>
               </div>
             </div>
 
-            <div className="flex justify-end gap-2 p-4 border-t border-zinc-100 bg-zinc-50">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowImportExcelModal(false);
-                  setExcelFile(null);
-                }}
-                className="px-4 py-2 hover:bg-zinc-200 text-zinc-600 rounded-lg text-xs font-bold cursor-pointer transition-colors"
-              >
-                Batal
-              </button>
-              <button
-                type="button"
-                disabled={!excelFile}
-                onClick={() => {
-                  alert("Fitur parser & penyalinan otomatis dari Excel akan diimplementasikan pada tahap selanjutnya!");
-                  setShowImportExcelModal(false);
-                  setExcelFile(null);
-                }}
-                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-zinc-200 disabled:text-zinc-400 text-white font-bold rounded-lg text-xs cursor-pointer shadow-xs disabled:cursor-not-allowed transition-all"
-              >
-                Lanjutkan Impor
-              </button>
+            <div className="p-5 space-y-4">
+              {/* ===== STEP 1: UPLOAD ===== */}
+              {importStep === "upload" && (
+                <>
+                  <p className="text-[11px] text-zinc-500 font-medium leading-relaxed">
+                    Unggah file Excel berisi data nilai siswa. Kolom yang dideteksi secara otomatis: 
+                    <strong> NIS</strong>, <strong>Tanggal</strong>, <strong>Mata Pelajaran</strong>, <strong>Materi</strong>, dan <strong>Nilai</strong>.
+                  </p>
+
+                  {/* Drag and Drop Zone */}
+                  <div
+                    onDragOver={handleExcelDragOver}
+                    onDragLeave={handleExcelDragLeave}
+                    onDrop={handleExcelDrop}
+                    onClick={() => document.getElementById("excel-file-input-class")?.click()}
+                    className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all duration-300 flex flex-col items-center justify-center gap-2 group ${
+                      isDraggingExcel
+                        ? "border-emerald-500 bg-emerald-50"
+                        : excelFile
+                        ? "border-emerald-500/55 bg-zinc-50/50"
+                        : "border-zinc-300 hover:border-emerald-500 hover:bg-zinc-50/30"
+                    }`}
+                  >
+                    <input
+                      id="excel-file-input-class"
+                      type="file"
+                      accept=".xlsx, .xls"
+                      onChange={handleExcelFileChange}
+                      className="hidden"
+                    />
+                    
+                    <div className={`p-3 rounded-full transition-colors ${
+                      excelFile ? "bg-emerald-100 text-emerald-600" : "bg-zinc-100 text-zinc-400 group-hover:bg-emerald-50 group-hover:text-emerald-500"
+                    }`}>
+                      <Upload size={24} />
+                    </div>
+                    
+                    {excelFile ? (
+                      <div className="space-y-1">
+                        <p className="text-xs font-bold text-emerald-600 truncate max-w-xs mx-auto">{excelFile.name}</p>
+                        <p className="text-[10px] text-zinc-400">{(excelFile.size / 1024).toFixed(1)} KB</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-1">
+                        <p className="text-xs font-bold text-zinc-700">Seret file Excel ke sini</p>
+                        <p className="text-[10px] text-zinc-400">atau klik untuk menelusuri berkas (.xlsx, .xls)</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Error messages */}
+                  {importErrors.length > 0 && (
+                    <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg space-y-1 max-h-24 overflow-y-auto">
+                      {importErrors.map((err, i) => (
+                        <p key={i} className="text-[10px] text-red-600 font-medium">{err}</p>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Guide Alert Box */}
+                  <div className="p-3 bg-zinc-50 border border-zinc-200 rounded-lg text-[10px] text-zinc-500 leading-relaxed space-y-1 font-medium">
+                    <span className="font-bold text-zinc-700 block">💡 Format Excel yang didukung:</span>
+                    <p>Kolom: <strong>NIS</strong>, <strong>Tanggal</strong>, <strong>Mata Pelajaran</strong>, <strong>Materi</strong>, <strong>Nilai</strong> (header bisa berbeda, sistem akan mendeteksi otomatis).</p>
+                  </div>
+                </>
+              )}
+
+              {/* ===== STEP 2: PREVIEW ===== */}
+              {importStep === "preview" && (
+                <>
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-bold text-zinc-700">
+                      Ditemukan <span className="text-emerald-600">{parsedRows.length} data nilai</span> dari file Excel
+                    </p>
+                    {importErrors.length > 0 && (
+                      <span className="text-[10px] text-amber-600 font-bold">{importErrors.length} peringatan</span>
+                    )}
+                  </div>
+
+                  {/* Preview table (first 5 rows) */}
+                  <div className="border border-zinc-200 rounded-lg overflow-hidden">
+                    <table className="w-full text-left text-[10px]">
+                      <thead className="bg-zinc-100 text-zinc-600 font-bold">
+                        <tr>
+                          <th className="px-3 py-2">#</th>
+                          <th className="px-3 py-2">NIS</th>
+                          <th className="px-3 py-2">Tanggal</th>
+                          <th className="px-3 py-2">Mapel</th>
+                          <th className="px-3 py-2">Materi</th>
+                          <th className="px-3 py-2 text-right">Nilai</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-zinc-100">
+                        {previewRows.map((row, i) => (
+                          <tr key={i} className="hover:bg-zinc-50">
+                            <td className="px-3 py-2 text-zinc-400 font-mono">{i + 1}</td>
+                            <td className="px-3 py-2 font-bold text-zinc-800">{row.nis}</td>
+                            <td className="px-3 py-2 text-zinc-600">{row.tanggal}</td>
+                            <td className="px-3 py-2 text-zinc-800">{row.nama_mapel}</td>
+                            <td className="px-3 py-2 text-zinc-500 max-w-[120px] truncate">{row.materi || "-"}</td>
+                            <td className="px-3 py-2 text-right font-bold font-mono text-zinc-800">{row.skor}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    {parsedRows.length > 5 && (
+                      <div className="px-3 py-2 bg-zinc-50 border-t border-zinc-200 text-center text-[10px] text-zinc-400 font-medium">
+                        ...dan {parsedRows.length - 5} baris lainnya
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Mapping status */}
+                  <div className="p-3 bg-amber-500/5 border border-amber-500/20 rounded-lg text-[10px] text-zinc-600 leading-relaxed font-medium">
+                    <span className="font-bold text-zinc-700 block mb-1">⚙️ Setelah dikonfirmasi, sistem akan:</span>
+                    <ul className="list-disc list-inside space-y-0.5">
+                      <li>Mencocokkan <strong>NIS</strong> dengan data siswa di kelas ini</li>
+                      <li>Mencocokkan <strong>Mata Pelajaran</strong> dengan daftar mapel</li>
+                      <li>Menyimpan data nilai secara massal ke database</li>
+                    </ul>
+                  </div>
+
+                  {/* Error messages */}
+                  {importErrors.length > 0 && (
+                    <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg space-y-1 max-h-24 overflow-y-auto">
+                      {importErrors.map((err, i) => (
+                        <p key={i} className="text-[10px] text-amber-700 font-medium">⚠ {err}</p>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+
+              {/* ===== STEP 3: SAVING ===== */}
+              {importStep === "saving" && (
+                <div className="py-6 space-y-4">
+                  {importSaving ? (
+                    <>
+                      <div className="flex items-center justify-center">
+                        <div className="w-16 h-16 rounded-full bg-strong-blue/10 flex items-center justify-center animate-pulse">
+                          <Upload size={28} className="text-strong-blue animate-bounce" />
+                        </div>
+                      </div>
+                      <div className="text-center space-y-2">
+                        <p className="text-sm font-bold text-zinc-800">Menyimpan data nilai...</p>
+                        <p className="text-xs text-zinc-500 font-medium">
+                          {importProgress.inserted} / {importProgress.total} tersimpan
+                        </p>
+                        {/* Progress bar */}
+                        <div className="w-full bg-zinc-200 rounded-full h-2 max-w-xs mx-auto overflow-hidden">
+                          <div 
+                            className="h-full bg-emerald-500 rounded-full transition-all duration-500"
+                            style={{ width: `${importProgress.total > 0 ? (importProgress.inserted / importProgress.total) * 100 : 0}%` }}
+                          />
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex items-center justify-center">
+                        <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center">
+                          <CheckCircle2 size={28} className="text-emerald-600" />
+                        </div>
+                      </div>
+                      <div className="text-center space-y-1">
+                        <p className="text-sm font-bold text-emerald-700">Import Selesai!</p>
+                        <div className="space-y-1">
+                          {importErrors.map((msg, i) => (
+                            <p key={i} className={`text-[11px] font-medium ${
+                              msg.startsWith("✓") ? "text-emerald-600" :
+                              msg.startsWith("✗") ? "text-red-500" :
+                              msg.startsWith("⚠") ? "text-amber-600" : "text-zinc-500"
+                            }`}>{msg}</p>
+                          ))}
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Footer Actions */}
+            <div className="flex justify-between items-center p-4 border-t border-zinc-100 bg-zinc-50">
+              {/* Left side: Download Template (only on upload step) */}
+              <div>
+                {importStep === "upload" && (
+                  <button
+                    type="button"
+                    onClick={() => downloadTemplate()}
+                    className="flex items-center gap-1.5 px-3 py-2 bg-transparent hover:bg-zinc-200 text-zinc-500 hover:text-strong-blue rounded-lg text-[10px] font-bold cursor-pointer transition-colors"
+                  >
+                    <FileSpreadsheet size={14} /> Download Template
+                  </button>
+                )}
+                {importStep === "preview" && (
+                  <button
+                    type="button"
+                    onClick={() => setImportStep("upload")}
+                    disabled={importSaving}
+                    className="flex items-center gap-1.5 px-3 py-2 bg-transparent hover:bg-zinc-200 text-zinc-500 hover:text-zinc-800 rounded-lg text-[10px] font-bold cursor-pointer transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+                  >
+                    ← Kembali
+                  </button>
+                )}
+              </div>
+
+              {/* Right side: action buttons */}
+              <div className="flex items-center gap-2">
+                {(importStep === "upload" || importStep === "preview") && (
+                  <button
+                    type="button"
+                    onClick={handleCloseImportModal}
+                    disabled={importSaving}
+                    className="px-4 py-2 hover:bg-zinc-200 text-zinc-600 rounded-lg text-xs font-bold cursor-pointer transition-colors disabled:opacity-30"
+                  >
+                    Batal
+                  </button>
+                )}
+
+                {importStep === "upload" && (
+                  <button
+                    type="button"
+                    disabled={!excelFile}
+                    onClick={handleParseExcel}
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-zinc-200 disabled:text-zinc-400 text-white font-bold rounded-lg text-xs cursor-pointer shadow-xs disabled:cursor-not-allowed transition-all"
+                  >
+                    Lanjutkan →
+                  </button>
+                )}
+
+                {importStep === "preview" && (
+                  <button
+                    type="button"
+                    disabled={parsedRows.length === 0}
+                    onClick={handleValidateAndSave}
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-zinc-200 disabled:text-zinc-400 text-white font-bold rounded-lg text-xs cursor-pointer shadow-xs disabled:cursor-not-allowed transition-all"
+                  >
+                    Konfirmasi & Simpan
+                  </button>
+                )}
+
+                {importStep === "saving" && !importSaving && (
+                  <button
+                    type="button"
+                    onClick={handleCloseImportModal}
+                    className="px-4 py-2 bg-strong-blue hover:bg-[#001D6E] text-white rounded-lg text-xs font-bold cursor-pointer transition-all shadow-xs"
+                  >
+                    Tutup
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>
