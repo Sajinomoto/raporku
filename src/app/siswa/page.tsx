@@ -278,18 +278,6 @@ export default function SiswaPage() {
         });
       }
 
-      if (rows.length === 0) {
-        rows.push({
-          mapel_id: "",
-          nama_mapel: "",
-          kategori: "",
-          skor: "",
-          materi: "",
-          kode_tentor: "",
-          tanggal_pembelajaran: new Date().toISOString().split("T")[0],
-          jam: ""
-        });
-      }
       setAcademicGrades({ rows });
     } catch (err) {
       console.error("Error loading inline data:", err);
@@ -504,7 +492,53 @@ export default function SiswaPage() {
 
     try {
       // 1. Validate and map NIS → siswa_id, mapel → mapel_id (no class filter for siswa page)
-      const mapping = await validateAndMapRows(parsedRows, supabase);
+      let mapping = await validateAndMapRows(parsedRows, supabase);
+
+      // Jika modal diklik dari dalam profil/input siswa tertentu, override siswa_id agar langsung terhubung ke siswa yang aktif
+      if (selectedStudent && mapping.valid.length === 0 && mapping.errors.some(e => e.reason.includes("tidak ditemukan"))) {
+        // Coba ulang mapping dengan override siswa_id ke selectedStudent.id
+        const uniqueMapel = [...new Set(parsedRows.map(r => r.nama_mapel))];
+        const { data: subjects } = await supabase
+          .from("mata_pelajaran")
+          .select("id, nama_mapel")
+          .in("nama_mapel", uniqueMapel);
+
+        const subjectMap = new Map<string, string>();
+        (subjects || []).forEach((s: any) => {
+          subjectMap.set(s.nama_mapel.toLowerCase(), s.id);
+        });
+
+        const autoMappedValid: any[] = [];
+        const autoMappedErrors: any[] = [];
+
+        parsedRows.forEach((row, idx) => {
+          const mapelId = subjectMap.get(row.nama_mapel.toLowerCase());
+          if (!mapelId) {
+            autoMappedErrors.push({
+              rowIndex: idx,
+              nis: row.nis,
+              reason: `Mata pelajaran "${row.nama_mapel}" tidak ditemukan di database.`,
+            });
+            return;
+          }
+          autoMappedValid.push({
+            siswa_id: selectedStudent.id,
+            mapel_id: mapelId,
+            tanggal: row.tanggal,
+            materi: row.materi,
+            skor: row.skor,
+          });
+        });
+
+        mapping = { valid: autoMappedValid, errors: autoMappedErrors };
+      } else if (selectedStudent && mapping.valid.length > 0) {
+        // Jika ada data valid tapi NIS berbeda dengan siswa yang dibuka, override siswa_id ke siswa yang aktif
+        mapping.valid = mapping.valid.map(v => ({
+          ...v,
+          siswa_id: selectedStudent.id
+        }));
+      }
+
       setMappedData(mapping);
 
       if (mapping.valid.length === 0) {
