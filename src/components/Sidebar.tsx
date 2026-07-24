@@ -8,8 +8,7 @@ import {
   Layers, 
   Users, 
   BookOpen, 
-  ClipboardCheck, 
-  TrendingUp,
+  FileSpreadsheet,
   LogOut,
   UserCheck,
   ChevronLeft,
@@ -47,6 +46,11 @@ export default function Sidebar() {
       name: "Mata Pelajaran",
       href: "/mapel",
       icon: BookOpen,
+    },
+    {
+      name: "Import",
+      href: "/import",
+      icon: FileSpreadsheet,
     },
   ];
 

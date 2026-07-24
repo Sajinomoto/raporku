@@ -15,7 +15,8 @@ import {
   Users,
   AlertCircle,
   Tag,
-  GraduationCap
+  GraduationCap,
+  FileSpreadsheet
 } from "lucide-react";
 
 export default function KelasPage() {
@@ -151,20 +152,28 @@ export default function KelasPage() {
           <h2 className="text-2xl font-black text-strong-blue tracking-tight">Manajemen Kelas</h2>
           <p className="text-xs text-zinc-600 mt-1 font-medium">Buat, kelola, dan pantau data kelas, jurusan, program, dan siswa.</p>
         </div>
-        <button
-          onClick={() => {
-            setIsEditing(false);
-            setFormNama("");
-            setFormDeskripsi("");
-            setFormJenjang("SD");
-            setFormJurusan("UMUM");
-            setFormProgramTag("");
-            setShowForm(true);
-          }}
-          className="flex items-center gap-2 px-4 py-2.5 bg-strong-blue hover:bg-[#001D6E] text-white rounded-lg text-sm font-semibold transition-all shadow-lg shadow-strong-blue/10 cursor-pointer"
-        >
-          <Plus size={16} /> Tambah Kelas
-        </button>
+        <div className="flex items-center gap-3">
+          <Link
+            href="/import"
+            className="flex items-center gap-2 px-4 py-2.5 bg-white hover:bg-zinc-100 text-strong-blue border border-strong-blue/30 rounded-lg text-sm font-semibold transition-all shadow-sm cursor-pointer"
+          >
+            <FileSpreadsheet size={16} className="text-mustard" /> Import Excel
+          </Link>
+          <button
+            onClick={() => {
+              setIsEditing(false);
+              setFormNama("");
+              setFormDeskripsi("");
+              setFormJenjang("SD");
+              setFormJurusan("UMUM");
+              setFormProgramTag("");
+              setShowForm(true);
+            }}
+            className="flex items-center gap-2 px-4 py-2.5 bg-strong-blue hover:bg-[#001D6E] text-white rounded-lg text-sm font-semibold transition-all shadow-lg shadow-strong-blue/10 cursor-pointer"
+          >
+            <Plus size={16} /> Tambah Kelas
+          </button>
+        </div>
       </div>
 
       {/* Class List Grid */}
