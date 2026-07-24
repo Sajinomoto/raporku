@@ -84,10 +84,28 @@ export const MAPEL_DICTIONARY: Record<string, SubjectMetadata> = {
     defaultKategori: "Peminatan",
     aliases: ["tps"],
   },
+  ub: {
+    kode: "ub",
+    nama_mapel: "Ujian Bulanan",
+    defaultKategori: "Wajib",
+    aliases: ["ub", "uji beban", "ujian bulanan", "evaluasi", "ulangan"],
+  },
+  num: {
+    kode: "num",
+    nama_mapel: "Numerasi",
+    defaultKategori: "Wajib",
+    aliases: ["num", "numerasi"],
+  },
+  lit: {
+    kode: "lit",
+    nama_mapel: "Literasi",
+    defaultKategori: "Wajib",
+    aliases: ["lit", "literasi"],
+  },
 };
 
 /**
- * Normalizes subject alias (e.g., 'b.ingg' -> 'bing', 'kimia' -> 'kim')
+ * Normalizes subject alias (e.g., 'b.ingg' -> 'bing', 'kimia' -> 'kim', 'ub 1' -> 'ub')
  */
 export function canonicalizeSubjectCode(rawCode: string): string | null {
   const clean = rawCode.toLowerCase().replace(/[\s._-]+/g, "");
@@ -100,25 +118,47 @@ export function canonicalizeSubjectCode(rawCode: string): string | null {
 }
 
 /**
- * Parses header like 'kim1', 'fis2', 'mtk10' into canonical subject code and session index.
+ * Parses header like 'kim1', 'fis2', 'UB 1', 'UB 23', 'Numerasi' into canonical subject code and session index.
  * Returns null if not matching standard subject grade header format.
  */
 export function parseSubjectGradeHeader(header: string): { kode: string; urutan: number; rawKode: string } | null {
   const cleanHeader = header.trim();
-  const match = cleanHeader.match(/^([a-zA-Z._-]+)(\d+)$/);
-  if (!match) return null;
+  const lowerHeader = cleanHeader.toLowerCase();
 
-  const rawKode = match[1];
-  const urutan = parseInt(match[2], 10);
-  const canonicalKode = canonicalizeSubjectCode(rawKode);
+  // Ignore identity, attendance, or rekap headers
+  if (
+    ["no", "nisn", "nis", "nama", "asal sekolah", "status siswa", "program", "kelas penempatan", "sesi efektif", "hadir", "sakit", "izin", "alpa", "catatan"].includes(lowerHeader) ||
+    /^(kb\s|pm\s|s\s)/i.test(cleanHeader)
+  ) {
+    return null;
+  }
 
-  if (!canonicalKode) return null;
+  // 1. Try matching subject code + space/separator + number (e.g., 'UB 1', 'ub-2', 'kim 5', 'b.ingg 1', 'b.indo0')
+  const match = cleanHeader.match(/^([a-zA-Z._\s-]+?)\s*(\d+)$/);
+  if (match) {
+    const rawKode = match[1].trim();
+    const urutan = parseInt(match[2], 10);
+    const canonicalKode = canonicalizeSubjectCode(rawKode);
+    if (canonicalKode) {
+      return {
+        kode: canonicalKode,
+        urutan,
+        rawKode,
+      };
+    }
+  }
 
-  return {
-    kode: canonicalKode,
-    urutan,
-    rawKode,
-  };
+  // 2. Try matching standalone subject code (e.g., 'Numerasi', 'Literasi')
+  const canonicalKode = canonicalizeSubjectCode(cleanHeader);
+  if (canonicalKode) {
+    return {
+      kode: canonicalKode,
+      urutan: 1,
+      rawKode: cleanHeader,
+    };
+  }
+
+  return null;
 }
 
 /**
