@@ -40,8 +40,14 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# custom
+# Architecture & Private Documentation
 details/
+example-folder/
+tasks/
+supabase/
+tech-stacks.md
+AGENTS.md
+CLAUDE.md
 
 # IDEs and editors
 .vscode/
@@ -63,8 +69,5 @@ details/
 .env.test.local
 .env.production.local
 
-# Agent configuration files
-AGENTS.md
-CLAUDE.md
 
 
