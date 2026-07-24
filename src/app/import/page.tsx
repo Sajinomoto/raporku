@@ -69,16 +69,23 @@ export default function GlobalImportPage() {
     setDbLoading(true);
     try {
       const [resSiswa, resKelas, resMapel] = await Promise.all([
-        supabase.from("siswa").select("*"),
-        supabase.from("kelas").select("*"),
-        supabase.from("mata_pelajaran").select("*"),
+        supabase.from("siswa").select("*").range(0, 99999),
+        supabase.from("kelas").select("*").range(0, 99999),
+        supabase.from("mata_pelajaran").select("*").range(0, 99999),
       ]);
 
-      setExistingStudents(resSiswa.data || []);
-      setExistingClasses(resKelas.data || []);
-      setExistingSubjects(resMapel.data || []);
+      const freshStudents = resSiswa.data || [];
+      const freshClasses = resKelas.data || [];
+      const freshSubjects = resMapel.data || [];
+
+      setExistingStudents(freshStudents);
+      setExistingClasses(freshClasses);
+      setExistingSubjects(freshSubjects);
+
+      return { freshStudents, freshClasses, freshSubjects };
     } catch (err) {
       console.error("Error fetching database context:", err);
+      return { freshStudents: [], freshClasses: [], freshSubjects: [] };
     } finally {
       setDbLoading(false);
     }
@@ -98,17 +105,22 @@ export default function GlobalImportPage() {
 
     setParsingLoading(true);
     try {
+      // 1. Fetch fresh DB context right before parsing
+      const { freshStudents, freshClasses, freshSubjects } = await fetchDatabaseContext();
+
+      // 2. Parse wide Excel workbook
       const rawParsed = await parseWideWorkbook(selectedFile);
       setParseResult(rawParsed);
 
+      // 3. Resolve candidates against fresh DB context
       const resolved = resolveSmartImport(rawParsed, {
         mode: importMode,
         autoCreateSiswa,
         tahunAjaran,
         semester,
-        existingStudents,
-        existingClasses,
-        existingSubjects,
+        existingStudents: freshStudents,
+        existingClasses: freshClasses,
+        existingSubjects: freshSubjects,
       });
 
       setResolvedData(resolved);
