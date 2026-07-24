@@ -594,7 +594,107 @@ export default function GlobalImportPage() {
             </div>
           )}
 
-          {/* Tab Content 5: Errors & Warnings */}
+          {/* Tab Content 5: Grades & Attendance */}
+          {activePreviewTab === "grades" && (
+            <div className="bg-white border border-zinc-200 rounded-xl p-6 shadow-xs space-y-4">
+              <h3 className="font-extrabold text-zinc-900 text-base flex items-center gap-2">
+                <FileSpreadsheet className="text-strong-blue" size={18} />
+                Preview Nilai Regular & Presensi per Siswa ({resolvedData.resolvedRows.length} Siswa)
+              </h3>
+              {resolvedData.resolvedRows.length === 0 ? (
+                <p className="text-xs text-zinc-500 italic">Tidak ada data nilai atau presensi yang dibaca.</p>
+              ) : (
+                <div className="overflow-x-auto max-h-[500px]">
+                  <table className="w-full border-collapse text-left text-xs">
+                    <thead className="sticky top-0 bg-zinc-100 z-10">
+                      <tr className="border-b border-zinc-200 text-[10px] font-bold text-zinc-400 uppercase">
+                        <th className="py-3 px-4">Sheet / Kelas</th>
+                        <th className="py-3 px-4">NISN</th>
+                        <th className="py-3 px-4">Nama Siswa</th>
+                        <th className="py-3 px-4">Presensi (H/S/I/A)</th>
+                        <th className="py-3 px-4">Catatan Guru</th>
+                        <th className="py-3 px-4">Total Nilai Mapel</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-zinc-100 font-bold text-zinc-800">
+                      {resolvedData.resolvedRows.map((row, idx) => (
+                        <tr key={idx} className="hover:bg-zinc-50">
+                          <td className="py-3 px-4 text-strong-blue">{row.sheetName}</td>
+                          <td className="py-3 px-4 font-mono">{row.studentNis}</td>
+                          <td className="py-3 px-4">{row.studentNama}</td>
+                          <td className="py-3 px-4 font-mono">
+                            {row.attendance ? (
+                              <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded text-[10px]">
+                                {row.attendance.hadir}/{row.attendance.sakit}/{row.attendance.izin}/{row.attendance.alpha}
+                              </span>
+                            ) : (
+                              "-"
+                            )}
+                          </td>
+                          <td className="py-3 px-4 font-normal text-zinc-600 truncate max-w-xs">{row.catatan || "-"}</td>
+                          <td className="py-3 px-4">
+                            <span className="px-2 py-0.5 bg-strong-blue/10 text-strong-blue rounded text-[10px] font-bold">
+                              {row.gradesCount} Nilai Terbaca
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Tab Content 6: UTBK & University Choices */}
+          {activePreviewTab === "utbk" && (
+            <div className="bg-white border border-zinc-200 rounded-xl p-6 shadow-xs space-y-4">
+              <h3 className="font-extrabold text-zinc-900 text-base flex items-center gap-2">
+                <Award className="text-amber-600" size={18} />
+                Preview UTBK & Pilihan Universitas ({resolvedData.summary.totalUtbkRowsToInsert} UTBK, {resolvedData.summary.totalUniversityChoicesToInsert} Universitas)
+              </h3>
+              {resolvedData.summary.totalUtbkRowsToInsert === 0 && resolvedData.summary.totalUniversityChoicesToInsert === 0 ? (
+                <p className="text-xs text-zinc-500 italic">Sheet ini tidak memiliki kolom data UTBK atau Pilihan Universitas (Bukan kelas SMA / Kolom kosong).</p>
+              ) : (
+                <div className="overflow-x-auto max-h-[500px]">
+                  <table className="w-full border-collapse text-left text-xs">
+                    <thead className="sticky top-0 bg-zinc-100 z-10">
+                      <tr className="border-b border-zinc-200 text-[10px] font-bold text-zinc-400 uppercase">
+                        <th className="py-3 px-4">Sheet / Kelas</th>
+                        <th className="py-3 px-4">NISN</th>
+                        <th className="py-3 px-4">Nama Siswa</th>
+                        <th className="py-3 px-4">UTBK (Komponen Skor)</th>
+                        <th className="py-3 px-4">Pilihan Universitas</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-zinc-100 font-bold text-zinc-800">
+                      {resolvedData.resolvedRows
+                        .filter((r) => r.utbkCount > 0 || r.univCount > 0)
+                        .map((row, idx) => (
+                          <tr key={idx} className="hover:bg-zinc-50">
+                            <td className="py-3 px-4 text-strong-blue">{row.sheetName}</td>
+                            <td className="py-3 px-4 font-mono">{row.studentNis}</td>
+                            <td className="py-3 px-4">{row.studentNama}</td>
+                            <td className="py-3 px-4">
+                              <span className="px-2 py-0.5 bg-amber-50 text-amber-700 border border-amber-200 rounded text-[10px] font-bold">
+                                {row.utbkCount} Komponen Skor
+                              </span>
+                            </td>
+                            <td className="py-3 px-4">
+                              <span className="px-2 py-0.5 bg-purple-50 text-purple-700 border border-purple-200 rounded text-[10px] font-bold">
+                                {row.univCount} Pilihan Univ
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Tab Content 7: Errors & Warnings */}
           {activePreviewTab === "errors" && (
             <div className="bg-white border border-zinc-200 rounded-xl p-6 shadow-xs space-y-4">
               <h3 className="font-extrabold text-zinc-900 text-base flex items-center gap-2">
