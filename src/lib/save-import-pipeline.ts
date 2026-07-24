@@ -17,7 +17,7 @@ export interface SaveImportSummary {
 }
 
 /**
- * Bulletproof ultra-fast batch save import pipeline
+ * Clean, fast, and error-free batch save import pipeline
  */
 export async function executeSaveImportPipeline(
   resolvedData: ResolvedSmartImportData,
@@ -38,7 +38,7 @@ export async function executeSaveImportPipeline(
   };
 
   try {
-    // 1. Bulk Insert / Upsert Candidate Classes (Ignoring Duplicates)
+    // 1. Bulk Insert Candidate Classes (Clean insert for filtered new classes)
     if (resolvedData.candidateClasses.length > 0) {
       const { data: existingClasses } = await supabase.from("kelas").select("nama_kelas").range(0, 99999);
       const existingNameSet = new Set((existingClasses || []).map((c) => c.nama_kelas.trim().toLowerCase()));
@@ -55,15 +55,16 @@ export async function executeSaveImportPipeline(
         }));
 
       if (newClassesToInsert.length > 0) {
-        const { error: clsErr } = await supabase
-          .from("kelas")
-          .upsert(newClassesToInsert, { onConflict: "nama_kelas", ignoreDuplicates: true });
-        if (clsErr) console.warn("Notice inserting candidate classes:", clsErr.message);
+        const { error: clsErr } = await supabase.from("kelas").insert(newClassesToInsert);
+        if (clsErr) {
+          console.error("Error inserting candidate classes:", clsErr);
+          throw new Error(`Gagal membuat kelas baru: ${clsErr.message}`);
+        }
         summary.classesCreated = newClassesToInsert.length;
       }
     }
 
-    // 2. Bulk Insert / Upsert Candidate Subjects (Ignoring Duplicates)
+    // 2. Bulk Insert Candidate Subjects
     if (resolvedData.candidateSubjects.length > 0) {
       const { data: existingSubjects } = await supabase.from("mata_pelajaran").select("jenjang, jurusan, kode_mapel").range(0, 99999);
       const existingSubjSet = new Set(
@@ -87,15 +88,16 @@ export async function executeSaveImportPipeline(
         }));
 
       if (newSubjToInsert.length > 0) {
-        const { error: subjErr } = await supabase
-          .from("mata_pelajaran")
-          .upsert(newSubjToInsert, { onConflict: "jenjang,jurusan,kode_mapel", ignoreDuplicates: true });
-        if (subjErr) console.warn("Notice inserting candidate subjects:", subjErr.message);
+        const { error: subjErr } = await supabase.from("mata_pelajaran").insert(newSubjToInsert);
+        if (subjErr) {
+          console.error("Error inserting candidate subjects:", subjErr);
+          throw new Error(`Gagal membuat mata pelajaran baru: ${subjErr.message}`);
+        }
         summary.subjectsCreated = newSubjToInsert.length;
       }
     }
 
-    // 3. Fetch Refreshed Master Tables (In Parallel with high range)
+    // 3. Fetch Refreshed Master Tables (In Parallel with range 0..99999)
     const [{ data: freshClasses }, { data: freshSubjects }] = await Promise.all([
       supabase.from("kelas").select("id, nama_kelas").range(0, 99999),
       supabase.from("mata_pelajaran").select("id, jenjang, jurusan, kode_mapel").range(0, 99999),
@@ -112,7 +114,7 @@ export async function executeSaveImportPipeline(
       }
     });
 
-    // 4. Bulk Insert Candidate Students (Ignoring Duplicates)
+    // 4. Bulk Insert Candidate Students
     if (resolvedData.candidateStudents.length > 0) {
       const { data: existingStudents } = await supabase.from("siswa").select("nis").range(0, 99999);
       const existingNisSet = new Set((existingStudents || []).map((s) => s.nis.trim().toLowerCase()));
@@ -131,10 +133,11 @@ export async function executeSaveImportPipeline(
         }));
 
       if (newStudentsToInsert.length > 0) {
-        const { error: stdErr } = await supabase
-          .from("siswa")
-          .upsert(newStudentsToInsert, { onConflict: "nis", ignoreDuplicates: true });
-        if (stdErr) console.warn("Notice inserting candidate students:", stdErr.message);
+        const { error: stdErr } = await supabase.from("siswa").insert(newStudentsToInsert);
+        if (stdErr) {
+          console.error("Error inserting candidate students:", stdErr);
+          throw new Error(`Gagal mendaftarkan siswa baru: ${stdErr.message}`);
+        }
         summary.studentsCreated = newStudentsToInsert.length;
       }
     }
