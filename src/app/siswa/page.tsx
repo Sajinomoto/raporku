@@ -29,7 +29,8 @@ import {
   FileSpreadsheet,
   Save,
   AlertCircle,
-  CheckCircle2
+  CheckCircle2,
+  GraduationCap
 } from "lucide-react";
 
 // Dynamically import ReactApexChart to prevent SSR window error
@@ -120,6 +121,8 @@ export default function SiswaPage() {
   const [studentGrades, setStudentGrades] = useState<NilasMapel[]>([]);
   const [studentAttendance, setStudentAttendance] = useState<Kehadiran | null>(null);
   const [studentNote, setStudentNote] = useState<CatatanGuru | null>(null);
+  const [studentUtbk, setStudentUtbk] = useState<any[]>([]);
+  const [studentUniversityChoices, setStudentUniversityChoices] = useState<any[]>([]);
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [activeTab, setActiveTab] = useState<"detail" | "rapor" | "input">("detail");
   const [showPhotoModal, setShowPhotoModal] = useState<string | null>(null);
@@ -864,8 +867,8 @@ export default function SiswaPage() {
   const fetchStudentReportData = async (student: Siswa) => {
     setLoadingDetails(true);
     try {
-      // Fetch grades, attendance, and notes in parallel
-      const [gradesRes, attRes, noteRes] = await Promise.all([
+      // Fetch grades, attendance, notes, utbk, and univ choices in parallel
+      const [gradesRes, attRes, noteRes, utbkRes, univRes] = await Promise.all([
         supabase
           .from("nilai")
           .select(`
@@ -888,7 +891,21 @@ export default function SiswaPage() {
           .from("catatan_guru")
           .select("catatan, nama_guru")
           .eq("siswa_id", student.id)
-          .maybeSingle()
+          .maybeSingle(),
+        supabase
+          .from("tryout_utbk")
+          .select(`
+            id,
+            nama_tryout,
+            tanggal_tryout,
+            tryout_utbk_detail (kode_komponen, nama_komponen, skor)
+          `)
+          .eq("siswa_id", student.id),
+        supabase
+          .from("pilihan_universitas")
+          .select("*")
+          .eq("siswa_id", student.id)
+          .order("pilihan_ke", { ascending: true })
       ]);
 
       if (gradesRes.error) throw gradesRes.error;
@@ -909,6 +926,8 @@ export default function SiswaPage() {
 
       setStudentAttendance(attRes.data || { hadir: 0, sakit: 0, izin: 0, alpha: 0, total_sesi: 0 });
       setStudentNote(noteRes.data || { catatan: "Belum ada catatan dari wali kelas.", nama_guru: "-" });
+      setStudentUtbk(utbkRes.data || []);
+      setStudentUniversityChoices(univRes.data || []);
 
     } catch (err) {
       console.error("Error fetching student details:", err);
@@ -1817,6 +1836,68 @@ export default function SiswaPage() {
                       </div>
                     </div>
                   </div>
+
+                  {/* SMA Section: Tryout UTBK & Pilihan Universitas */}
+                  {(classes.find(c => c.id === selectedStudent.kelas_id)?.jenjang || "SD") === "SMA" && (
+                    <div className="space-y-4 pt-4 border-t border-zinc-100">
+                      {/* Pilihan Universitas */}
+                      <div className="bg-zinc-50 border border-zinc-200 rounded-xl p-4 space-y-3">
+                        <h4 className="font-extrabold text-strong-blue text-xs flex items-center gap-2">
+                          <GraduationCap size={16} className="text-mustard" /> Pilihan Universitas & Jurusan
+                        </h4>
+                        {studentUniversityChoices.length === 0 ? (
+                          <p className="text-xs text-zinc-400 font-medium italic">Belum ada pilihan universitas yang terdaftar.</p>
+                        ) : (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            {studentUniversityChoices.map((choice: any, idx: number) => (
+                              <div key={idx} className="p-3 bg-white border border-zinc-200 rounded-lg space-y-1">
+                                <span className="text-[10px] font-bold text-strong-blue uppercase tracking-wider block">
+                                  Pilihan {choice.pilihan_ke || idx + 1}
+                                </span>
+                                <p className="font-extrabold text-zinc-900 text-xs">{choice.universitas}</p>
+                                <p className="text-xs text-zinc-600 font-medium">Jurusan: {choice.jurusan}</p>
+                                {choice.status && (
+                                  <span className="inline-block px-2 py-0.5 bg-emerald-50 text-emerald-600 border border-emerald-200 rounded text-[10px] font-bold mt-1">
+                                    Status: {choice.status}
+                                  </span>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Tryout UTBK */}
+                      <div className="bg-zinc-50 border border-zinc-200 rounded-xl p-4 space-y-3">
+                        <h4 className="font-extrabold text-strong-blue text-xs flex items-center gap-2">
+                          <Award size={16} className="text-amber-600" /> Hasil Tryout UTBK
+                        </h4>
+                        {studentUtbk.length === 0 ? (
+                          <p className="text-xs text-zinc-400 font-medium italic">Belum ada data tryout UTBK terinput.</p>
+                        ) : (
+                          <div className="space-y-3">
+                            {studentUtbk.map((utbk: any, idx: number) => (
+                              <div key={idx} className="p-3 bg-white border border-zinc-200 rounded-lg space-y-2">
+                                <div className="flex justify-between items-center">
+                                  <p className="font-bold text-zinc-900 text-xs">{utbk.nama_tryout}</p>
+                                  <span className="text-[10px] text-zinc-400 font-bold">
+                                    {utbk.tanggal_tryout ? new Date(utbk.tanggal_tryout).toLocaleDateString("id-ID") : "Tanggal N/A"}
+                                  </span>
+                                </div>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {(utbk.tryout_utbk_detail || []).map((detail: any, dIdx: number) => (
+                                    <span key={dIdx} className="px-2 py-1 bg-zinc-100 text-zinc-700 rounded text-[10px] font-mono font-bold border border-zinc-200">
+                                      {detail.kode_komponen}: <strong className="text-strong-blue">{detail.skor}</strong>
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
 
                 </div>
               </div>
