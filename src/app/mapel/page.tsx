@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
+import { MataPelajaran } from "@/types/database";
 import { 
   BookOpen, 
   Plus, 
@@ -11,16 +12,11 @@ import {
   GraduationCap, 
   Tag,
   AlertCircle,
-  Search
+  Search,
+  Code,
+  CheckCircle,
+  XCircle
 } from "lucide-react";
-
-interface MataPelajaran {
-  id: string;
-  nama_mapel: string;
-  kategori: string;
-  jenjang: string;
-  created_at: string;
-}
 
 export default function MapelPage() {
   const [subjects, setSubjects] = useState<MataPelajaran[]>([]);
@@ -28,14 +24,18 @@ export default function MapelPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedJenjangFilter, setSelectedJenjangFilter] = useState("all");
   const [selectedKategoriFilter, setSelectedKategoriFilter] = useState("all");
+  const [selectedJurusanFilter, setSelectedJurusanFilter] = useState("all");
   
   // Form states
   const [showForm, setShowForm] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [formId, setFormId] = useState("");
   const [formNama, setFormNama] = useState("");
+  const [formKodeMapel, setFormKodeMapel] = useState("");
   const [formKategori, setFormKategori] = useState("Wajib");
   const [formJenjang, setFormJenjang] = useState("SD");
+  const [formJurusan, setFormJurusan] = useState("UMUM");
+  const [formAktif, setFormAktif] = useState(true);
   const [confirmDeleteSubject, setConfirmDeleteSubject] = useState<MataPelajaran | null>(null);
 
   useEffect(() => {
@@ -61,10 +61,13 @@ export default function MapelPage() {
 
   const filteredSubjects = subjects.filter((subject) => {
     const query = searchQuery.toLowerCase();
-    const matchesSearch = subject.nama_mapel.toLowerCase().includes(query);
+    const matchesSearch = 
+      subject.nama_mapel.toLowerCase().includes(query) ||
+      (subject.kode_mapel || "").toLowerCase().includes(query);
     const matchesJenjang = selectedJenjangFilter === "all" || (subject.jenjang || "SD") === selectedJenjangFilter;
     const matchesKategori = selectedKategoriFilter === "all" || subject.kategori === selectedKategoriFilter;
-    return matchesSearch && matchesJenjang && matchesKategori;
+    const matchesJurusan = selectedJurusanFilter === "all" || (subject.jurusan || "UMUM") === selectedJurusanFilter;
+    return matchesSearch && matchesJenjang && matchesKategori && matchesJurusan;
   });
 
   const handleSaveSubject = async (e: React.FormEvent) => {
@@ -72,25 +75,26 @@ export default function MapelPage() {
     if (!formNama.trim()) return;
 
     try {
+      const payload = {
+        nama_mapel: formNama,
+        kode_mapel: formKodeMapel.trim().toLowerCase() || null,
+        kategori: formKategori,
+        jenjang: formJenjang,
+        jurusan: formJurusan,
+        aktif: formAktif,
+      };
+
       if (isEditing) {
         const { error } = await supabase
           .from("mata_pelajaran")
-          .update({
-            nama_mapel: formNama,
-            kategori: formKategori,
-            jenjang: formJenjang,
-          })
+          .update(payload)
           .eq("id", formId);
 
         if (error) throw error;
       } else {
         const { error } = await supabase
           .from("mata_pelajaran")
-          .insert({
-            nama_mapel: formNama,
-            kategori: formKategori,
-            jenjang: formJenjang,
-          });
+          .insert(payload);
 
         if (error) throw error;
       }
@@ -99,8 +103,11 @@ export default function MapelPage() {
       setShowForm(false);
       setIsEditing(false);
       setFormNama("");
+      setFormKodeMapel("");
       setFormKategori("Wajib");
       setFormJenjang("SD");
+      setFormJurusan("UMUM");
+      setFormAktif(true);
       fetchSubjects();
     } catch (err) {
       console.error("Error saving subject:", err);
@@ -110,8 +117,11 @@ export default function MapelPage() {
   const handleEditSubject = (subject: MataPelajaran) => {
     setFormId(subject.id);
     setFormNama(subject.nama_mapel);
+    setFormKodeMapel(subject.kode_mapel || "");
     setFormKategori(subject.kategori);
     setFormJenjang(subject.jenjang || "SD");
+    setFormJurusan(subject.jurusan || "UMUM");
+    setFormAktif(subject.aktif ?? true);
     setIsEditing(true);
     setShowForm(true);
   };
@@ -137,14 +147,17 @@ export default function MapelPage() {
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-black text-strong-blue tracking-tight">Kurikulum Mata Pelajaran</h2>
-          <p className="text-xs text-zinc-600 mt-1 font-medium">Kelola daftar mata pelajaran utama dan peminatan di sekolah.</p>
+          <p className="text-xs text-zinc-600 mt-1 font-medium">Kelola daftar mata pelajaran utama, kode mapel, jurusan, dan peminatan di sekolah.</p>
         </div>
         <button
           onClick={() => {
             setIsEditing(false);
             setFormNama("");
+            setFormKodeMapel("");
             setFormKategori("Wajib");
             setFormJenjang("SD");
+            setFormJurusan("UMUM");
+            setFormAktif(true);
             setShowForm(true);
           }}
           className="flex items-center gap-2 px-4 py-2.5 bg-strong-blue hover:bg-[#001D6E] text-white rounded-lg text-sm font-semibold transition-all shadow-lg shadow-strong-blue/10 cursor-pointer"
@@ -159,15 +172,15 @@ export default function MapelPage() {
           <Search className="absolute left-3.5 top-3 text-zinc-400" size={16} />
           <input
             type="text"
-            placeholder="Cari mata pelajaran..."
+            placeholder="Cari mata pelajaran atau kode (mtk, kim, fis)..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full bg-white border border-zinc-300 rounded-lg pl-10 pr-4 py-2 text-sm text-zinc-900 focus:outline-none focus:border-strong-blue focus:ring-1 focus:ring-strong-blue"
           />
         </div>
         
-        <div className="flex gap-4">
-          <div className="w-40">
+        <div className="flex flex-wrap sm:flex-nowrap gap-3">
+          <div className="w-36">
             <select
               value={selectedJenjangFilter}
               onChange={(e) => setSelectedJenjangFilter(e.target.value)}
@@ -180,7 +193,20 @@ export default function MapelPage() {
             </select>
           </div>
 
-          <div className="w-44">
+          <div className="w-36">
+            <select
+              value={selectedJurusanFilter}
+              onChange={(e) => setSelectedJurusanFilter(e.target.value)}
+              className="w-full bg-white border border-zinc-300 rounded-lg px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:border-strong-blue focus:ring-1 focus:ring-strong-blue"
+            >
+              <option value="all">Semua Jurusan</option>
+              <option value="UMUM">UMUM</option>
+              <option value="IPA">IPA</option>
+              <option value="IPS">IPS</option>
+            </select>
+          </div>
+
+          <div className="w-40">
             <select
               value={selectedKategoriFilter}
               onChange={(e) => setSelectedKategoriFilter(e.target.value)}
@@ -211,11 +237,14 @@ export default function MapelPage() {
           <table className="w-full border-collapse text-left">
             <thead>
               <tr className="border-b border-zinc-200 bg-zinc-50/70 text-[10px] font-bold text-zinc-400 uppercase tracking-wider">
-                <th className="py-3.5 px-5 w-16">No.</th>
+                <th className="py-3.5 px-5 w-14">No.</th>
                 <th className="py-3.5 px-5">Nama Mata Pelajaran</th>
-                <th className="py-3.5 px-5 w-40">Kategori</th>
-                <th className="py-3.5 px-5 w-40">Jenjang</th>
-                <th className="py-3.5 px-5 w-28 text-right">Aksi</th>
+                <th className="py-3.5 px-5 w-32">Kode Mapel</th>
+                <th className="py-3.5 px-5 w-32">Jurusan</th>
+                <th className="py-3.5 px-5 w-32">Kategori</th>
+                <th className="py-3.5 px-5 w-28">Jenjang</th>
+                <th className="py-3.5 px-5 w-24">Status</th>
+                <th className="py-3.5 px-5 w-24 text-right">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-100 text-xs font-bold text-zinc-800">
@@ -232,6 +261,21 @@ export default function MapelPage() {
                       </div>
                       <span className="text-zinc-900 font-bold">{subject.nama_mapel}</span>
                     </div>
+                  </td>
+                  <td className="py-3.5 px-5">
+                    {subject.kode_mapel ? (
+                      <span className="inline-flex items-center gap-1 font-mono text-[11px] font-bold text-strong-blue bg-strong-blue/5 border border-strong-blue/15 px-2 py-0.5 rounded-md">
+                        <Code size={11} />
+                        {subject.kode_mapel}
+                      </span>
+                    ) : (
+                      <span className="text-zinc-400 text-[11px] font-normal">-</span>
+                    )}
+                  </td>
+                  <td className="py-3.5 px-5">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-zinc-100 text-zinc-700 border border-zinc-200">
+                      {subject.jurusan || "UMUM"}
+                    </span>
                   </td>
                   <td className="py-3.5 px-5">
                     <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
@@ -256,6 +300,17 @@ export default function MapelPage() {
                       <GraduationCap size={10} />
                       {subject.jenjang || "SD"}
                     </span>
+                  </td>
+                  <td className="py-3.5 px-5">
+                    {subject.aktif ?? true ? (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                        <CheckCircle size={10} /> Aktif
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-zinc-400 bg-zinc-100 px-2 py-0.5 rounded border border-zinc-200">
+                        <XCircle size={10} /> Nonaktif
+                      </span>
+                    )}
                   </td>
                   <td className="py-3.5 px-5">
                     <div className="flex items-center justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -304,38 +359,80 @@ export default function MapelPage() {
                 <input
                   type="text"
                   required
-                  placeholder="Misal: Matematika Wajib, Fisika, Biologi"
+                  placeholder="Misal: Matematika, Fisika, Biologi"
                   value={formNama}
                   onChange={(e) => setFormNama(e.target.value)}
                   className="w-full bg-white border border-zinc-300 rounded-lg px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:border-strong-blue focus:ring-1 focus:ring-strong-blue"
                 />
               </div>
 
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-zinc-500">Kategori</label>
-                <select
-                  value={formKategori}
-                  onChange={(e) => setFormKategori(e.target.value)}
-                  className="w-full bg-white border border-zinc-300 rounded-lg px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:border-strong-blue focus:ring-1 focus:ring-strong-blue"
-                >
-                  <option value="Wajib">Wajib</option>
-                  <option value="Peminatan">Peminatan</option>
-                  <option value="Muatan Lokal">Muatan Lokal</option>
-                </select>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-zinc-500">Kode Mapel (Excel)</label>
+                  <input
+                    type="text"
+                    placeholder="Misal: mtk, kim, fis, bio"
+                    value={formKodeMapel}
+                    onChange={(e) => setFormKodeMapel(e.target.value)}
+                    className="w-full bg-white border border-zinc-300 rounded-lg px-3 py-2 text-sm font-mono text-zinc-900 focus:outline-none focus:border-strong-blue focus:ring-1 focus:ring-strong-blue"
+                  />
+                  <p className="text-[10px] text-zinc-400">Kode header Excel (kim1, fis1)</p>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-zinc-500">Jurusan</label>
+                  <select
+                    value={formJurusan}
+                    onChange={(e) => setFormJurusan(e.target.value)}
+                    className="w-full bg-white border border-zinc-300 rounded-lg px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:border-strong-blue focus:ring-1 focus:ring-strong-blue"
+                  >
+                    <option value="UMUM">UMUM</option>
+                    <option value="IPA">IPA</option>
+                    <option value="IPS">IPS</option>
+                  </select>
+                </div>
               </div>
 
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-zinc-500">Jenjang</label>
-                <select
-                  value={formJenjang}
-                  onChange={(e) => setFormJenjang(e.target.value)}
-                  required
-                  className="w-full bg-white border border-zinc-300 rounded-lg px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:border-strong-blue focus:ring-1 focus:ring-strong-blue"
-                >
-                  <option value="SD">SD</option>
-                  <option value="SMP">SMP</option>
-                  <option value="SMA">SMA</option>
-                </select>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-zinc-500">Kategori</label>
+                  <select
+                    value={formKategori}
+                    onChange={(e) => setFormKategori(e.target.value)}
+                    className="w-full bg-white border border-zinc-300 rounded-lg px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:border-strong-blue focus:ring-1 focus:ring-strong-blue"
+                  >
+                    <option value="Wajib">Wajib</option>
+                    <option value="Peminatan">Peminatan</option>
+                    <option value="Muatan Lokal">Muatan Lokal</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-zinc-500">Jenjang</label>
+                  <select
+                    value={formJenjang}
+                    onChange={(e) => setFormJenjang(e.target.value)}
+                    required
+                    className="w-full bg-white border border-zinc-300 rounded-lg px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:border-strong-blue focus:ring-1 focus:ring-strong-blue"
+                  >
+                    <option value="SD">SD</option>
+                    <option value="SMP">SMP</option>
+                    <option value="SMA">SMA</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 pt-1">
+                <input
+                  type="checkbox"
+                  id="formAktif"
+                  checked={formAktif}
+                  onChange={(e) => setFormAktif(e.target.checked)}
+                  className="rounded border-zinc-300 text-strong-blue focus:ring-strong-blue h-4 w-4"
+                />
+                <label htmlFor="formAktif" className="text-xs font-bold text-zinc-700 cursor-pointer">
+                  Mata Pelajaran Aktif
+                </label>
               </div>
 
               <div className="flex justify-end gap-2 pt-2">

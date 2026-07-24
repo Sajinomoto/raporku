@@ -60,6 +60,8 @@ interface Siswa {
   tahun_ajaran: string;
   asal_sekolah: string;
   jenjang?: string;
+  status_siswa?: string;
+  program_tag?: string | null;
   created_at: string;
 }
 
@@ -133,6 +135,8 @@ export default function SiswaPage() {
   const [formTahun, setFormTahun] = useState("2026/2027");
   const [formAsalSekolah, setFormAsalSekolah] = useState("");
   const [formJenjang, setFormJenjang] = useState("SD");
+  const [formStatusSiswa, setFormStatusSiswa] = useState("Aktif");
+  const [formProgramTag, setFormProgramTag] = useState("");
   const [formFile, setFormFile] = useState<File | null>(null);
   const [formFileUrl, setFormFileUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -1022,6 +1026,8 @@ export default function SiswaPage() {
         semester: formSemester,
         tahun_ajaran: formTahun,
         asal_sekolah: formAsalSekolah,
+        status_siswa: formStatusSiswa,
+        program_tag: formProgramTag.trim() || null,
       };
 
       if (isEditing) {
@@ -1055,6 +1061,8 @@ export default function SiswaPage() {
       setFormKelasId("");
       setFormAsalSekolah("");
       setFormJenjang("SD");
+      setFormStatusSiswa("Aktif");
+      setFormProgramTag("");
       setFormFile(null);
       setFormFileUrl(null);
       fetchStudents();
@@ -1075,6 +1083,8 @@ export default function SiswaPage() {
     setFormTahun(student.tahun_ajaran);
     setFormAsalSekolah(student.asal_sekolah);
     setFormJenjang(student.jenjang || "SD");
+    setFormStatusSiswa(student.status_siswa || "Aktif");
+    setFormProgramTag(student.program_tag || "");
     setFormFileUrl(student.foto_url);
     setFormFile(null);
     setIsEditing(true);
@@ -2483,6 +2493,33 @@ export default function SiswaPage() {
                     placeholder="Contoh: SMP Negeri Wakanda"
                     value={formAsalSekolah}
                     onChange={(e) => setFormAsalSekolah(e.target.value)}
+                    className="w-full bg-white border border-zinc-300 rounded-lg px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:border-strong-blue focus:ring-1 focus:ring-strong-blue"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-zinc-500">Status Siswa</label>
+                  <select
+                    value={formStatusSiswa}
+                    onChange={(e) => setFormStatusSiswa(e.target.value)}
+                    className="w-full bg-white border border-zinc-300 rounded-lg px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:border-strong-blue focus:ring-1 focus:ring-strong-blue"
+                  >
+                    <option value="Aktif">Aktif</option>
+                    <option value="Alumni">Alumni</option>
+                    <option value="Cuti">Cuti</option>
+                    <option value="Keluar">Keluar</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-zinc-500">Program Tag (Opsional)</label>
+                  <input
+                    type="text"
+                    placeholder="Contoh: Reguler, Excellent"
+                    value={formProgramTag}
+                    onChange={(e) => setFormProgramTag(e.target.value)}
                     className="w-full bg-white border border-zinc-300 rounded-lg px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:border-strong-blue focus:ring-1 focus:ring-strong-blue"
                   />
                 </div>

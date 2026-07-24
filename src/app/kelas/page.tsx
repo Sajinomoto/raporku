@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
+import { Kelas } from "@/types/database";
 import { 
   Layers, 
   Plus, 
@@ -12,17 +13,10 @@ import {
   CalendarDays,
   ChevronRight,
   Users,
-  AlertCircle
+  AlertCircle,
+  Tag,
+  GraduationCap
 } from "lucide-react";
-
-interface Kelas {
-  id: string;
-  nama_kelas: string;
-  tahun_ajaran: string;
-  deskripsi: string | null;
-  jenjang: string;
-  created_at: string;
-}
 
 export default function KelasPage() {
   const [classes, setClasses] = useState<Kelas[]>([]);
@@ -37,6 +31,8 @@ export default function KelasPage() {
   const [formTahun, setFormTahun] = useState("2026/2027");
   const [formDeskripsi, setFormDeskripsi] = useState("");
   const [formJenjang, setFormJenjang] = useState("SD");
+  const [formJurusan, setFormJurusan] = useState("UMUM");
+  const [formProgramTag, setFormProgramTag] = useState("");
   const [confirmDeleteClass, setConfirmDeleteClass] = useState<Kelas | null>(null);
 
   useEffect(() => {
@@ -82,27 +78,26 @@ export default function KelasPage() {
     if (!formNama.trim()) return;
 
     try {
+      const payload = {
+        nama_kelas: formNama,
+        tahun_ajaran: formTahun,
+        deskripsi: formDeskripsi || null,
+        jenjang: formJenjang,
+        jurusan: formJurusan,
+        program_tag: formProgramTag.trim() || null,
+      };
+
       if (isEditing) {
         const { error } = await supabase
           .from("kelas")
-          .update({
-            nama_kelas: formNama,
-            tahun_ajaran: formTahun,
-            deskripsi: formDeskripsi || null,
-            jenjang: formJenjang,
-          })
+          .update(payload)
           .eq("id", formId);
 
         if (error) throw error;
       } else {
         const { error } = await supabase
           .from("kelas")
-          .insert({
-            nama_kelas: formNama,
-            tahun_ajaran: formTahun,
-            deskripsi: formDeskripsi || null,
-            jenjang: formJenjang,
-          });
+          .insert(payload);
 
         if (error) throw error;
       }
@@ -113,6 +108,8 @@ export default function KelasPage() {
       setFormNama("");
       setFormDeskripsi("");
       setFormJenjang("SD");
+      setFormJurusan("UMUM");
+      setFormProgramTag("");
       fetchClasses();
     } catch (err) {
       console.error("Error saving class:", err);
@@ -125,6 +122,8 @@ export default function KelasPage() {
     setFormTahun(kelas.tahun_ajaran);
     setFormDeskripsi(kelas.deskripsi || "");
     setFormJenjang(kelas.jenjang || "SD");
+    setFormJurusan(kelas.jurusan || "UMUM");
+    setFormProgramTag(kelas.program_tag || "");
     setIsEditing(true);
     setShowForm(true);
   };
@@ -150,7 +149,7 @@ export default function KelasPage() {
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-black text-strong-blue tracking-tight">Manajemen Kelas</h2>
-          <p className="text-xs text-zinc-600 mt-1 font-medium">Buat, kelola, dan pantau data kelas dan siswa.</p>
+          <p className="text-xs text-zinc-600 mt-1 font-medium">Buat, kelola, dan pantau data kelas, jurusan, program, dan siswa.</p>
         </div>
         <button
           onClick={() => {
@@ -158,6 +157,8 @@ export default function KelasPage() {
             setFormNama("");
             setFormDeskripsi("");
             setFormJenjang("SD");
+            setFormJurusan("UMUM");
+            setFormProgramTag("");
             setShowForm(true);
           }}
           className="flex items-center gap-2 px-4 py-2.5 bg-strong-blue hover:bg-[#001D6E] text-white rounded-lg text-sm font-semibold transition-all shadow-lg shadow-strong-blue/10 cursor-pointer"
@@ -182,7 +183,7 @@ export default function KelasPage() {
           {classes.map((kelas) => (
             <div
               key={kelas.id}
-              className="bg-white border border-zinc-200 rounded-xl p-5 pb-6 hover:border-strong-blue/30 shadow-sm hover:shadow-lg hover:-translate-y-1 active:scale-[0.99] transition-all duration-300 relative group flex flex-col justify-between min-h-[180px] cursor-pointer"
+              className="bg-white border border-zinc-200 rounded-xl p-5 pb-6 hover:border-strong-blue/30 shadow-sm hover:shadow-lg hover:-translate-y-1 active:scale-[0.99] transition-all duration-300 relative group flex flex-col justify-between min-h-[190px] cursor-pointer"
             >
               <Link href={`/kelas/${kelas.id}`} className="absolute inset-0 z-0 rounded-xl" />
               
@@ -191,29 +192,47 @@ export default function KelasPage() {
                   <h3 className="font-black text-zinc-900 text-lg tracking-tight group-hover:text-strong-blue transition-colors">
                     {kelas.nama_kelas}
                   </h3>
-                  <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                    kelas.jenjang === "SD"
-                      ? "bg-sky-500/10 text-sky-600 border border-sky-500/20"
-                      : kelas.jenjang === "SMP"
-                      ? "bg-amber-500/10 text-[#A67800] border border-amber-500/20"
-                      : "bg-red-500/10 text-red-600 border border-red-500/20"
-                  }`}>
-                    {kelas.jenjang || "SD"}
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                      kelas.jenjang === "SD"
+                        ? "bg-sky-500/10 text-sky-600 border border-sky-500/20"
+                        : kelas.jenjang === "SMP"
+                        ? "bg-amber-500/10 text-[#A67800] border border-amber-500/20"
+                        : "bg-red-500/10 text-red-600 border border-red-500/20"
+                    }`}>
+                      {kelas.jenjang || "SD"}
+                    </span>
+                    {kelas.jurusan && kelas.jurusan !== "UMUM" && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/10 text-purple-600 border border-purple-500/20">
+                        {kelas.jurusan}
+                      </span>
+                    )}
+                  </div>
                 </div>
-                <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-1.5 text-xs text-zinc-500 font-medium">
+
+                <div className="flex flex-wrap items-center gap-2 mt-2 text-xs text-zinc-500 font-medium">
                   <div className="flex items-center gap-1">
                     <CalendarDays size={12} className="text-strong-blue" />
-                    <span>Tahun Ajaran: {kelas.tahun_ajaran}</span>
+                    <span>Tahun: {kelas.tahun_ajaran}</span>
                   </div>
-                  <span className="hidden sm:inline text-zinc-300">|</span>
+                  <span className="text-zinc-300">|</span>
                   <div className="flex items-center gap-1">
                     <Users size={12} className="text-strong-blue" />
                     <span>{studentCounts[kelas.id] || 0} Siswa</span>
                   </div>
+                  {kelas.program_tag && (
+                    <>
+                      <span className="text-zinc-300">|</span>
+                      <span className="inline-flex items-center gap-1 text-[10px] font-bold text-mustard bg-mustard/15 px-2 py-0.5 rounded border border-mustard/30">
+                        <Tag size={10} />
+                        {kelas.program_tag}
+                      </span>
+                    </>
+                  )}
                 </div>
+
                 {kelas.deskripsi && (
-                  <p className="text-xs text-zinc-600 mt-2 line-clamp-2 italic leading-relaxed font-medium">
+                  <p className="text-xs text-zinc-600 mt-2.5 line-clamp-2 italic leading-relaxed font-medium">
                     "{kelas.deskripsi}"
                   </p>
                 )}
@@ -277,37 +296,68 @@ export default function KelasPage() {
                 <input
                   type="text"
                   required
-                  placeholder="Misal: 10-IPA-1, XII-MIPA-3"
+                  placeholder="Misal: 12 SMA IPA REG A, 06 SD REG A"
                   value={formNama}
                   onChange={(e) => setFormNama(e.target.value)}
                   className="w-full bg-white border border-zinc-300 rounded-lg px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:border-strong-blue focus:ring-1 focus:ring-strong-blue"
                 />
               </div>
 
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-zinc-500">Tahun Ajaran</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Misal: 2026/2027"
-                  value={formTahun}
-                  onChange={(e) => setFormTahun(e.target.value)}
-                  className="w-full bg-white border border-zinc-300 rounded-lg px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:border-strong-blue focus:ring-1 focus:ring-strong-blue"
-                />
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-zinc-500">Jenjang</label>
+                  <select
+                    value={formJenjang}
+                    onChange={(e) => {
+                      setFormJenjang(e.target.value);
+                      if (e.target.value !== "SMA") setFormJurusan("UMUM");
+                    }}
+                    required
+                    className="w-full bg-white border border-zinc-300 rounded-lg px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:border-strong-blue focus:ring-1 focus:ring-strong-blue"
+                  >
+                    <option value="SD">SD</option>
+                    <option value="SMP">SMP</option>
+                    <option value="SMA">SMA</option>
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-zinc-500">Jurusan</label>
+                  <select
+                    value={formJurusan}
+                    onChange={(e) => setFormJurusan(e.target.value)}
+                    className="w-full bg-white border border-zinc-300 rounded-lg px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:border-strong-blue focus:ring-1 focus:ring-strong-blue"
+                  >
+                    <option value="UMUM">UMUM</option>
+                    <option value="IPA">IPA</option>
+                    <option value="IPS">IPS</option>
+                  </select>
+                </div>
               </div>
 
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-zinc-500">Jenjang</label>
-                <select
-                  value={formJenjang}
-                  onChange={(e) => setFormJenjang(e.target.value)}
-                  required
-                  className="w-full bg-white border border-zinc-300 rounded-lg px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:border-strong-blue focus:ring-1 focus:ring-strong-blue"
-                >
-                  <option value="SD">SD</option>
-                  <option value="SMP">SMP</option>
-                  <option value="SMA">SMA</option>
-                </select>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-zinc-500">Tahun Ajaran</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Misal: 2026/2027"
+                    value={formTahun}
+                    onChange={(e) => setFormTahun(e.target.value)}
+                    className="w-full bg-white border border-zinc-300 rounded-lg px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:border-strong-blue focus:ring-1 focus:ring-strong-blue"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-zinc-500">Program Tag (Opsional)</label>
+                  <input
+                    type="text"
+                    placeholder="Misal: Reguler, Excellent"
+                    value={formProgramTag}
+                    onChange={(e) => setFormProgramTag(e.target.value)}
+                    className="w-full bg-white border border-zinc-300 rounded-lg px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:border-strong-blue focus:ring-1 focus:ring-strong-blue"
+                  />
+                </div>
               </div>
 
               <div className="space-y-1">
@@ -316,7 +366,7 @@ export default function KelasPage() {
                   placeholder="Deskripsi singkat mengenai kelas..."
                   value={formDeskripsi}
                   onChange={(e) => setFormDeskripsi(e.target.value)}
-                  rows={3}
+                  rows={2}
                   className="w-full bg-white border border-zinc-300 rounded-lg px-3 py-2 text-sm text-zinc-900 focus:outline-none focus:border-strong-blue focus:ring-1 focus:ring-strong-blue"
                 />
               </div>
