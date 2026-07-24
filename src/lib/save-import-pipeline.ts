@@ -1,6 +1,7 @@
 import { supabase } from "./supabase";
 import { ResolvedSmartImportData } from "./smart-import-resolver";
 import { WideWorkbookParseResult } from "./wide-excel-parser";
+import { inferClassInfo } from "./class-infer";
 
 export interface SaveImportSummary {
   success: boolean;
@@ -38,7 +39,7 @@ export async function executeSaveImportPipeline(
   };
 
   try {
-    // 1. Bulk Insert Candidate Classes (Clean insert for filtered new classes)
+    // 1. Bulk Insert Candidate Classes
     if (resolvedData.candidateClasses.length > 0) {
       const { data: existingClasses } = await supabase.from("kelas").select("nama_kelas").range(0, 99999);
       const existingNameSet = new Set((existingClasses || []).map((c) => c.nama_kelas.trim().toLowerCase()));
@@ -109,28 +110,43 @@ export async function executeSaveImportPipeline(
     const subjectMapByKey = new Map<string, string>();
     (freshSubjects || []).forEach((m) => {
       if (m.kode_mapel) {
-        const key = `${m.jenjang.toUpperCase()}_${(m.jurusan || "UMUM").toUpperCase()}_${m.kode_mapel.toLowerCase()}`;
-        subjectMapByKey.set(key, m.id);
+        const key1 = `${m.jenjang.toUpperCase()}_${(m.jurusan || "UMUM").toUpperCase()}_${m.kode_mapel.toLowerCase()}`;
+        const key2 = `ANY_${m.kode_mapel.toLowerCase()}`;
+        subjectMapByKey.set(key1, m.id);
+        if (!subjectMapByKey.has(key2)) {
+          subjectMapByKey.set(key2, m.id);
+        }
       }
     });
 
-    // 4. Bulk Insert Candidate Students
+    // 4. Bulk Insert Candidate Students with Multi-Tier Class Resolution
     if (resolvedData.candidateStudents.length > 0) {
       const { data: existingStudents } = await supabase.from("siswa").select("nis").range(0, 99999);
       const existingNisSet = new Set((existingStudents || []).map((s) => s.nis.trim().toLowerCase()));
 
       const newStudentsToInsert = resolvedData.candidateStudents
         .filter((std) => !existingNisSet.has(std.nis.trim().toLowerCase()))
-        .map((std) => ({
-          nis: std.nis,
-          nama_lengkap: std.nama_lengkap,
-          kelas_id: classMapByName.get(std.kelas_nama.trim().toLowerCase()) || null,
-          asal_sekolah: std.asal_sekolah || "Import Excel",
-          status_siswa: std.status_siswa || "Aktif",
-          program_tag: std.program_tag || null,
-          semester: options.semester,
-          tahun_ajaran: options.tahunAjaran,
-        }));
+        .map((std) => {
+          let resolvedClassId = classMapByName.get(std.kelas_nama.trim().toLowerCase()) || null;
+          if (!resolvedClassId && std.sheet_kelas_nama) {
+            resolvedClassId = classMapByName.get(std.sheet_kelas_nama.trim().toLowerCase()) || null;
+          }
+          if (!resolvedClassId) {
+            const inferred = inferClassInfo(std.kelas_nama).nama_kelas.trim().toLowerCase();
+            resolvedClassId = classMapByName.get(inferred) || null;
+          }
+
+          return {
+            nis: std.nis,
+            nama_lengkap: std.nama_lengkap,
+            kelas_id: resolvedClassId,
+            asal_sekolah: std.asal_sekolah || "Import Excel",
+            status_siswa: std.status_siswa || "Aktif",
+            program_tag: std.program_tag || null,
+            semester: options.semester,
+            tahun_ajaran: options.tahunAjaran,
+          };
+        });
 
       if (newStudentsToInsert.length > 0) {
         const { error: stdErr } = await supabase.from("siswa").insert(newStudentsToInsert);
@@ -191,9 +207,10 @@ export async function executeSaveImportPipeline(
         }
 
         for (const grade of row.grades) {
-          const subjectKey = `${sheet.inferredClass.jenjang.toUpperCase()}_${sheet.inferredClass.jurusan.toUpperCase()}_${grade.kodeMapel.toLowerCase()}`;
-          const fallbackKey = `${sheet.inferredClass.jenjang.toUpperCase()}_UMUM_${grade.kodeMapel.toLowerCase()}`;
-          const subjectId = subjectMapByKey.get(subjectKey) || subjectMapByKey.get(fallbackKey);
+          const subjectKey1 = `${sheet.inferredClass.jenjang.toUpperCase()}_${sheet.inferredClass.jurusan.toUpperCase()}_${grade.kodeMapel.toLowerCase()}`;
+          const subjectKey2 = `${sheet.inferredClass.jenjang.toUpperCase()}_UMUM_${grade.kodeMapel.toLowerCase()}`;
+          const subjectKey3 = `ANY_${grade.kodeMapel.toLowerCase()}`;
+          const subjectId = subjectMapByKey.get(subjectKey1) || subjectMapByKey.get(subjectKey2) || subjectMapByKey.get(subjectKey3);
 
           if (!subjectId) continue;
 
@@ -263,7 +280,7 @@ export async function executeSaveImportPipeline(
       }
     }
 
-    // 7. Bulk Process Sesi Pembelajaran (Upsert with ignoreDuplicates to avoid 409 Conflict)
+    // 7. Bulk Process Sesi Pembelajaran
     const sessionCache = new Map<string, string>();
     if (neededSessionsMap.size > 0) {
       const missingSessionsPayload = Array.from(neededSessionsMap.values()).map((p) => ({
@@ -301,20 +318,27 @@ export async function executeSaveImportPipeline(
 
     // 8. Bulk Process Grades (Nilai) in 500-item Chunks
     if (rawGradesList.length > 0) {
-      const gradesToInsert = rawGradesList.map((g) => {
-        let sessionId: string | null = null;
-        if (g.classId) {
-          const sessionKey = `${g.classId}_${g.subjectId}_${g.kodeSesi}`;
-          sessionId = sessionCache.get(sessionKey) || null;
-        }
-        return {
-          siswa_id: g.studentId,
-          mapel_id: g.subjectId,
-          skor: g.skor,
-          sesi_id: sessionId,
-          materi: `Materi Sesi ${g.urutanSesi} (${g.kodeMapel.toUpperCase()})`,
-        };
-      });
+      const gradesToInsert = rawGradesList
+        .filter((g) => !isNaN(g.skor)) // Filter out non-numeric values
+        .map((g) => {
+          let sessionId: string | null = null;
+          if (g.classId) {
+            const sessionKey = `${g.classId}_${g.subjectId}_${g.kodeSesi}`;
+            sessionId = sessionCache.get(sessionKey) || null;
+          }
+          return {
+            siswa_id: g.studentId,
+            mapel_id: g.subjectId,
+            skor: g.skor,
+            sesi_id: sessionId,
+            materi: `Materi Sesi ${g.urutanSesi} (${g.kodeMapel.toUpperCase()})`,
+          };
+        });
+
+      // Clear old grades for target students to prevent duplicate accummulation
+      if (targetStudentIds.length > 0) {
+        await supabase.from("nilai").delete().in("siswa_id", targetStudentIds);
+      }
 
       // Insert in chunks of 500
       const CHUNK_SIZE = 500;
@@ -322,7 +346,7 @@ export async function executeSaveImportPipeline(
         const chunk = gradesToInsert.slice(i, i + CHUNK_SIZE);
         const { error: gradeErr } = await supabase.from("nilai").insert(chunk);
         if (gradeErr) {
-          console.warn("Notice inserting grades chunk:", gradeErr.message);
+          console.error("Error inserting grades chunk:", gradeErr.message);
         } else {
           summary.gradesInserted += chunk.length;
         }
@@ -344,15 +368,17 @@ export async function executeSaveImportPipeline(
 
         if (!utbkErr && newUtbk && newUtbk[0]) {
           const tryoutId = newUtbk[0].id;
-          const detailRows = utbkItem.grades.map((u) => ({
-            tryout_id: tryoutId,
-            kode_komponen: u.kodeKomponen,
-            nama_komponen: u.namaKomponen || u.kodeKomponen,
-            skor: u.skor,
-          }));
+          const detailRows = utbkItem.grades
+            .filter((u) => !isNaN(u.skor))
+            .map((u) => ({
+              tryout_id: tryoutId,
+              kode_komponen: u.kodeKomponen,
+              nama_komponen: u.namaKomponen || u.kodeKomponen,
+              skor: u.skor,
+            }));
 
           await supabase.from("tryout_utbk_detail").insert(detailRows);
-          summary.utbkInserted = (summary.utbkInserted || 0) + utbkItem.grades.length;
+          summary.utbkInserted = (summary.utbkInserted || 0) + detailRows.length;
         }
       }
     }

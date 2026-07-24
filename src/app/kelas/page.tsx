@@ -54,7 +54,8 @@ export default function KelasPage() {
       // Fetch students to map count of students in each class
       const { data: studentsData, error: studentsError } = await supabase
         .from("siswa")
-        .select("kelas_id");
+        .select("kelas_id")
+        .range(0, 99999);
 
       if (studentsError) throw studentsError;
 

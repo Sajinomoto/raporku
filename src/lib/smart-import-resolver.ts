@@ -39,6 +39,7 @@ export interface ResolvedSmartImportData {
     nis: string;
     nama_lengkap: string;
     kelas_nama: string;
+    sheet_kelas_nama?: string;
     asal_sekolah: string;
     status_siswa: string;
     program_tag: string | null;
@@ -166,6 +167,7 @@ export function resolveSmartImport(
               nis: row.nis,
               nama_lengkap: row.nama,
               kelas_nama: row.kelasPenempatan || sheetClassName,
+              sheet_kelas_nama: sheetClassName,
               asal_sekolah: row.asalSekolah || "Import Excel",
               status_siswa: row.statusSiswa || "Aktif",
               program_tag: row.programTag || sheet.inferredClass.program_tag,
