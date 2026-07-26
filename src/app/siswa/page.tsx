@@ -2476,54 +2476,85 @@ export default function SiswaPage() {
 
                           {/* Rangkuman Metrik Row */}
                           {loadingDetails ? (
-                            <div className="grid grid-cols-4 gap-3">
+                            <div className="grid grid-cols-4 gap-2.5">
                               {Array(4).fill(0).map((_, idx) => (
-                                <div key={idx} className="bg-zinc-50 border border-zinc-200 rounded-xl p-3 space-y-1.5 animate-pulse">
-                                  <div className="h-2.5 bg-zinc-200 rounded w-16 mx-auto" />
-                                  <div className="h-5 bg-zinc-300 rounded w-12 mx-auto" />
-                                  <div className="h-2.5 bg-zinc-200 rounded w-20 mx-auto" />
+                                <div key={idx} className="bg-zinc-50 border border-zinc-200 rounded-xl p-2.5 space-y-1 animate-pulse">
+                                  <div className="h-2.5 bg-zinc-200 rounded w-16" />
+                                  <div className="h-4 bg-zinc-300 rounded w-12" />
                                 </div>
                               ))}
                             </div>
                           ) : (
-                            <div className="grid grid-cols-4 gap-3">
-                              <div className="bg-zinc-50 border border-zinc-200 print-card rounded-xl p-3 text-center shadow-xs">
-                                <span className="text-[9px] text-zinc-500 print-text-muted font-bold uppercase tracking-wider block">Rata-Rata</span>
-                                <p className="text-xl font-black text-strong-blue print-text mt-0.5">{avgGrade > 0 ? avgGrade.toFixed(2) : "0.00"}</p>
-                                <span className={`inline-block text-[8px] font-bold px-1.5 py-0.5 rounded mt-1 ${
-                                  avgGrade >= 80 ? "bg-emerald-500/10 text-emerald-600" : "bg-mustard/20 text-[#A67800]"
-                                }`}>
-                                  {overallPredicate.desc}
-                                </span>
+                            <div className="grid grid-cols-4 gap-2.5">
+                              {/* Card 1: Rata-Rata */}
+                              <div className="bg-zinc-50/80 border border-zinc-200/90 print-card rounded-xl p-2.5 shadow-xs flex flex-col justify-between">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-[9px] text-zinc-500 print-text-muted font-extrabold uppercase tracking-wider">Rata-Rata</span>
+                                  <div className="w-5 h-5 rounded-lg bg-strong-blue/10 text-strong-blue flex items-center justify-center shrink-0">
+                                    <Award size={12} />
+                                  </div>
+                                </div>
+                                <div className="flex items-baseline justify-between mt-1 gap-1">
+                                  <span className="text-lg font-black text-strong-blue print-text">{avgGrade > 0 ? avgGrade.toFixed(2) : "0.00"}</span>
+                                  <span className={`inline-block text-[8px] font-bold px-1.5 py-0.5 rounded-full ${
+                                    avgGrade >= 80 ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20" : "bg-mustard/20 text-[#A67800] border border-mustard/30"
+                                  }`}>
+                                    {overallPredicate.desc}
+                                  </span>
+                                </div>
                               </div>
 
-                              <div className="bg-zinc-50 border border-zinc-200 print-card rounded-xl p-3 text-center shadow-xs">
-                                <span className="text-[9px] text-zinc-500 print-text-muted font-bold uppercase tracking-wider block">Kehadiran</span>
-                                <p className="text-xl font-black text-emerald-600 print-text mt-0.5">{Math.round(attendancePercent)}%</p>
-                                <span className="inline-block text-[8px] font-bold px-1.5 py-0.5 rounded mt-1 bg-emerald-500/10 text-emerald-600">
-                                  {attendancePercent >= 90 ? "Sangat Baik" : attendancePercent >= 75 ? "Baik" : "Kurang"}
-                                </span>
+                              {/* Card 2: Kehadiran */}
+                              <div className="bg-zinc-50/80 border border-zinc-200/90 print-card rounded-xl p-2.5 shadow-xs flex flex-col justify-between">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-[9px] text-zinc-500 print-text-muted font-extrabold uppercase tracking-wider">Kehadiran</span>
+                                  <div className="w-5 h-5 rounded-lg bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0">
+                                    <Clock size={12} />
+                                  </div>
+                                </div>
+                                <div className="flex items-baseline justify-between mt-1 gap-1">
+                                  <span className="text-lg font-black text-emerald-600 print-text">{Math.round(attendancePercent)}%</span>
+                                  <span className="inline-block text-[8px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+                                    {attendancePercent >= 90 ? "Sangat Baik" : attendancePercent >= 75 ? "Baik" : "Kurang"}
+                                  </span>
+                                </div>
                               </div>
 
-                              <div className="bg-zinc-50 border border-zinc-200 print-card rounded-xl p-3 text-center shadow-xs">
-                                <span className="text-[9px] text-zinc-500 print-text-muted font-bold uppercase tracking-wider block">Total Hadir</span>
-                                <p className="text-xl font-black text-zinc-800 print-text mt-0.5">{(studentAttendance?.hadir || 0)} Sesi</p>
-                                <span className="inline-block text-[8px] font-bold px-1.5 py-0.5 rounded mt-1 bg-zinc-200 print-fill-card text-zinc-600 print-text-muted">
-                                  Dari {studentAttendance?.total_sesi || 0} Sesi
-                                </span>
+                              {/* Card 3: Total Hadir */}
+                              <div className="bg-zinc-50/80 border border-zinc-200/90 print-card rounded-xl p-2.5 shadow-xs flex flex-col justify-between">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-[9px] text-zinc-500 print-text-muted font-extrabold uppercase tracking-wider">Total Hadir</span>
+                                  <div className="w-5 h-5 rounded-lg bg-zinc-200/80 text-zinc-700 flex items-center justify-center shrink-0">
+                                    <CheckCircle2 size={12} />
+                                  </div>
+                                </div>
+                                <div className="flex items-baseline justify-between mt-1 gap-1">
+                                  <span className="text-lg font-black text-zinc-800 print-text">{(studentAttendance?.hadir || 0)} <span className="text-[10px] font-semibold text-zinc-500">Sesi</span></span>
+                                  <span className="inline-block text-[8px] font-bold px-1.5 py-0.5 rounded-full bg-zinc-200/80 print-fill-card text-zinc-600 print-text-muted border border-zinc-300/60">
+                                    Dari {studentAttendance?.total_sesi || 0} Sesi
+                                  </span>
+                                </div>
                               </div>
 
-                              <div className="bg-zinc-50 border border-zinc-200 print-card rounded-xl p-3 text-center shadow-xs">
-                                <span className="text-[9px] text-zinc-500 print-text-muted font-bold uppercase tracking-wider block">Predikat</span>
-                                <p className="text-xl font-black text-purple-600 print-text mt-0.5">{overallPredicate.letter}</p>
-                                <span className="inline-block text-[8px] font-bold px-1.5 py-0.5 rounded mt-1 bg-purple-500/10 text-purple-600">
-                                  {overallPredicate.desc}
-                                </span>
+                              {/* Card 4: Predikat */}
+                              <div className="bg-zinc-50/80 border border-zinc-200/90 print-card rounded-xl p-2.5 shadow-xs flex flex-col justify-between">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-[9px] text-zinc-500 print-text-muted font-extrabold uppercase tracking-wider">Predikat</span>
+                                  <div className="w-5 h-5 rounded-lg bg-purple-500/10 text-purple-600 flex items-center justify-center shrink-0">
+                                    <BookmarkCheck size={12} />
+                                  </div>
+                                </div>
+                                <div className="flex items-baseline justify-between mt-1 gap-1">
+                                  <span className="text-lg font-black text-purple-600 print-text">{overallPredicate.letter}</span>
+                                  <span className="inline-block text-[8px] font-bold px-1.5 py-0.5 rounded-full bg-purple-500/10 text-purple-600 border border-purple-500/20">
+                                    {overallPredicate.desc}
+                                  </span>
+                                </div>
                               </div>
                             </div>
                           )}
 
-                          {/* Visualisasi Grafik (Baris 1: Bar Chart Full Width, Baris 2: Radar & Donut 2 Kolom) */}
+                          {/* Visualisasi Grafik (Baris 1: Bar Chart Full Width, Baris 2: Radar & Donut 2 Kolom, Baris 3: Data Kehadiran) */}
                           {loadingDetails ? (
                             <div className="space-y-3">
                               <div className="bg-white border border-zinc-200 rounded-xl p-3 h-[140px] flex flex-col justify-center items-center gap-2 animate-pulse">
@@ -2560,7 +2591,7 @@ export default function SiswaPage() {
                                 )}
                               </div>
 
-                              {/* Baris 2: Grafik Kemampuan & Distribusi Nilai (2 Kolom Sejajar - Centered) */}
+                              {/* Baris 2: Grafik Kemampuan & Distribusi Nilai (2 Kolom Sejajar) */}
                               <div className="grid grid-cols-2 gap-3">
                                 <div className="bg-white border border-zinc-200 rounded-xl p-3 space-y-1 shadow-2xs print-chart-card overflow-hidden flex flex-col justify-between">
                                   <h4 className="text-[11px] font-bold text-strong-blue tracking-wide border-b border-zinc-200 pb-1.5 uppercase">GRAFIK KEMAMPUAN</h4>
@@ -2593,6 +2624,37 @@ export default function SiswaPage() {
                                     <div className="h-[145px] flex items-center justify-center text-[10px] text-zinc-500 font-medium">Belum ada nilai</div>
                                   )}
                                 </div>
+                              </div>
+
+                              {/* Baris 3: Data Kehadiran (Dipindahkan ke Halaman 1, di bawah Grafik Kemampuan & Distribusi Nilai) */}
+                              <div className="bg-white border border-zinc-200 rounded-xl p-3 space-y-1.5 shadow-2xs print-chart-card">
+                                <h4 className="text-[11px] font-bold text-strong-blue print-text tracking-wide border-b border-zinc-200 print-border pb-1 uppercase">KEHADIRAN</h4>
+                                <table className="w-full text-xs text-zinc-600 print-text-muted">
+                                  <thead>
+                                    <tr className="border-b border-zinc-200 print-border text-[10px]">
+                                      <th className="py-1 text-left font-bold">Keterangan</th>
+                                      <th className="py-1 text-right font-bold">Jumlah Sesi</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody className="divide-y divide-zinc-200 print-border text-[11px]">
+                                    <tr>
+                                      <td className="py-1 font-medium text-zinc-800 print-text">Hadir</td>
+                                      <td className="py-1 text-right font-bold text-zinc-900 print-text">{(studentAttendance?.hadir || 0)} Sesi</td>
+                                    </tr>
+                                    <tr>
+                                      <td className="py-1 font-medium text-zinc-800 print-text">Sakit</td>
+                                      <td className="py-1 text-right font-bold text-zinc-900 print-text">{(studentAttendance?.sakit || 0)} Sesi</td>
+                                    </tr>
+                                    <tr>
+                                      <td className="py-1 font-medium text-zinc-800 print-text">Izin</td>
+                                      <td className="py-1 text-right font-bold text-zinc-900 print-text">{(studentAttendance?.izin || 0)} Sesi</td>
+                                    </tr>
+                                    <tr>
+                                      <td className="py-1 font-medium text-zinc-800 print-text">Alpa (Alpha)</td>
+                                      <td className="py-1 text-right font-bold text-zinc-900 print-text">{(studentAttendance?.alpha || 0)} Sesi</td>
+                                    </tr>
+                                  </tbody>
+                                </table>
                               </div>
                             </div>
                           )}
@@ -2627,88 +2689,48 @@ export default function SiswaPage() {
                             </div>
                           </div>
 
-                          {/* Detail Nilai & Kehadiran Table */}
+                          {/* Detail Nilai Table (Full Width) */}
                           {loadingDetails ? (
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-5 animate-pulse bg-white border border-zinc-200 rounded-xl p-4">
-                              <div className="md:col-span-1 space-y-3">
-                                <div className="h-3.5 bg-zinc-200 rounded w-20" />
-                                <div className="h-28 bg-zinc-50 rounded-xl" />
-                              </div>
-                              <div className="md:col-span-2 space-y-3">
-                                <div className="h-3.5 bg-zinc-200 rounded w-20" />
-                                <div className="h-28 bg-zinc-50 rounded-xl" />
-                              </div>
+                            <div className="space-y-3 animate-pulse bg-white border border-zinc-200 rounded-xl p-4">
+                              <div className="h-3.5 bg-zinc-200 rounded w-20" />
+                              <div className="h-28 bg-zinc-50 rounded-xl" />
                             </div>
                           ) : (
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                              {/* Kehadiran Details */}
-                              <div className="md:col-span-1 space-y-1.5">
-                                <h4 className="text-[11px] font-bold text-strong-blue print-text tracking-wide border-b-2 print-border border-zinc-200 pb-1 uppercase">KEHADIRAN</h4>
-                                <table className="w-full text-xs text-zinc-600 print-text-muted">
-                                  <thead>
-                                    <tr className="border-b border-zinc-200 print-border">
-                                      <th className="py-1.5 text-left">Keterangan</th>
-                                      <th className="py-1.5 text-right">Jumlah</th>
+                            <div className="space-y-1.5">
+                              <h4 className="text-[11px] font-bold text-strong-blue print-text tracking-wide border-b-2 print-border border-zinc-200 pb-1 uppercase">DETAIL NILAI</h4>
+                              <table className="w-full text-xs text-zinc-600 print-text-muted">
+                                <thead>
+                                  <tr className="border-b border-zinc-200 print-border">
+                                    <th className="py-1.5 text-left">Mata Pelajaran</th>
+                                    <th className="py-1.5 text-left">Materi</th>
+                                    <th className="py-1.5 text-center w-24">Tentor</th>
+                                    <th className="py-1.5 text-center w-28">Waktu</th>
+                                    <th className="py-1.5 text-right w-16">Skor</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-zinc-200 print-border">
+                                  {studentGrades.map((g) => (
+                                    <tr key={g.id}>
+                                      <td className="py-1.5 font-medium text-zinc-800 print-text">
+                                        {g.nama_mapel} <span className="text-[9px] text-zinc-400 font-medium">({g.kategori})</span>
+                                      </td>
+                                      <td className="py-1.5 italic text-zinc-500 line-clamp-1">{g.materi || "-"}</td>
+                                      <td className="py-1.5 text-center text-zinc-500 font-mono text-[11px]">{g.kode_tentor || "-"}</td>
+                                      <td className="py-1.5 text-center text-zinc-500 font-mono text-[10px]">
+                                        {g.tanggal_pembelajaran
+                                          ? `${new Date(g.tanggal_pembelajaran).toLocaleDateString("id-ID", { day: '2-digit', month: 'short', year: 'numeric' })}${g.jam ? `, ${g.jam}` : ""}`
+                                          : "-"}
+                                      </td>
+                                      <td className="py-1.5 text-right font-bold text-strong-blue print-text">{g.skor}</td>
                                     </tr>
-                                  </thead>
-                                  <tbody className="divide-y divide-zinc-200 print-border">
+                                  ))}
+                                  {studentGrades.length === 0 && (
                                     <tr>
-                                      <td className="py-1.5 font-medium text-zinc-800 print-text">Hadir</td>
-                                      <td className="py-1.5 text-right font-bold">{(studentAttendance?.hadir || 0)} Sesi</td>
+                                      <td colSpan={5} className="py-3 text-center text-zinc-500 italic">Belum ada nilai terinput.</td>
                                     </tr>
-                                    <tr>
-                                      <td className="py-1.5 font-medium text-zinc-800 print-text">Sakit</td>
-                                      <td className="py-1.5 text-right font-bold">{(studentAttendance?.sakit || 0)} Sesi</td>
-                                    </tr>
-                                    <tr>
-                                      <td className="py-1.5 font-medium text-zinc-800 print-text">Izin</td>
-                                      <td className="py-1.5 text-right font-bold">{(studentAttendance?.izin || 0)} Sesi</td>
-                                    </tr>
-                                    <tr>
-                                      <td className="py-1.5 font-medium text-zinc-800 print-text">Alpa (Alpha)</td>
-                                      <td className="py-1.5 text-right font-bold">{(studentAttendance?.alpha || 0)} Sesi</td>
-                                    </tr>
-                                  </tbody>
-                                </table>
-                              </div>
-
-                              {/* Table of subject details */}
-                              <div className="md:col-span-2 space-y-1.5">
-                                <h4 className="text-[11px] font-bold text-strong-blue print-text tracking-wide border-b-2 print-border border-zinc-200 pb-1 uppercase">DETAIL NILAI</h4>
-                                <table className="w-full text-xs text-zinc-600 print-text-muted">
-                                  <thead>
-                                    <tr className="border-b border-zinc-200 print-border">
-                                      <th className="py-1.5 text-left">Mata Pelajaran</th>
-                                      <th className="py-1.5 text-left">Materi</th>
-                                      <th className="py-1.5 text-center w-20">Tentor</th>
-                                      <th className="py-1.5 text-center w-24">Waktu</th>
-                                      <th className="py-1.5 text-right w-14">Skor</th>
-                                    </tr>
-                                  </thead>
-                                  <tbody className="divide-y divide-zinc-200 print-border">
-                                    {studentGrades.map((g) => (
-                                      <tr key={g.id}>
-                                        <td className="py-1.5 font-medium text-zinc-800 print-text">
-                                          {g.nama_mapel} <span className="text-[9px] text-zinc-400 font-medium">({g.kategori})</span>
-                                        </td>
-                                        <td className="py-1.5 italic text-zinc-500 line-clamp-1">{g.materi || "-"}</td>
-                                        <td className="py-1.5 text-center text-zinc-500 font-mono text-[11px]">{g.kode_tentor || "-"}</td>
-                                        <td className="py-1.5 text-center text-zinc-500 font-mono text-[10px]">
-                                          {g.tanggal_pembelajaran
-                                            ? `${new Date(g.tanggal_pembelajaran).toLocaleDateString("id-ID", { day: '2-digit', month: 'short', year: 'numeric' })}${g.jam ? `, ${g.jam}` : ""}`
-                                            : "-"}
-                                        </td>
-                                        <td className="py-1.5 text-right font-bold text-strong-blue print-text">{g.skor}</td>
-                                      </tr>
-                                    ))}
-                                    {studentGrades.length === 0 && (
-                                      <tr>
-                                        <td colSpan={5} className="py-3 text-center text-zinc-500 italic">Belum ada nilai terinput.</td>
-                                      </tr>
-                                    )}
-                                  </tbody>
-                                </table>
-                              </div>
+                                  )}
+                                </tbody>
+                              </table>
                             </div>
                           )}
 
@@ -2830,49 +2852,80 @@ export default function SiswaPage() {
 
                       {/* Rangkuman Metrik Row — Compact */}
                       {loadingDetails ? (
-                        <div className="grid grid-cols-4 gap-3">
+                        <div className="grid grid-cols-4 gap-2.5">
                           {Array(4).fill(0).map((_, idx) => (
-                            <div key={idx} className="bg-zinc-50 border border-zinc-200 rounded-xl p-3 space-y-1 animate-pulse">
-                              <div className="h-2.5 bg-zinc-200 rounded w-14 mx-auto" />
-                              <div className="h-5 bg-zinc-300 rounded w-10 mx-auto" />
-                              <div className="h-2.5 bg-zinc-200 rounded w-16 mx-auto" />
+                            <div key={idx} className="bg-zinc-50 border border-zinc-200 rounded-xl p-2.5 space-y-1 animate-pulse">
+                              <div className="h-2.5 bg-zinc-200 rounded w-14" />
+                              <div className="h-4 bg-zinc-300 rounded w-10" />
                             </div>
                           ))}
                         </div>
                       ) : (
-                        <div className="grid grid-cols-4 gap-3">
-                          <div className="bg-zinc-50 border border-zinc-200 print-card rounded-xl p-3 text-center shadow-xs">
-                            <span className="text-[9px] text-zinc-500 print-text-muted font-bold uppercase tracking-wider block">Rata-Rata</span>
-                            <p className="text-lg font-black text-strong-blue print-text mt-0.5">{avgGrade > 0 ? avgGrade.toFixed(2) : "0.00"}</p>
-                            <span className={`inline-block text-[8px] font-bold px-1.5 py-0.5 rounded mt-1 ${
-                              avgGrade >= 80 ? "bg-emerald-500/10 text-emerald-600" : "bg-mustard/20 text-[#A67800]"
-                            }`}>
-                              {overallPredicate.desc}
-                            </span>
+                        <div className="grid grid-cols-4 gap-2.5">
+                          {/* Card 1: Rata-Rata */}
+                          <div className="bg-zinc-50/80 border border-zinc-200/90 print-card rounded-xl p-2.5 shadow-xs flex flex-col justify-between">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[9px] text-zinc-500 print-text-muted font-extrabold uppercase tracking-wider">Rata-Rata</span>
+                              <div className="w-5 h-5 rounded-lg bg-strong-blue/10 text-strong-blue flex items-center justify-center shrink-0">
+                                <Award size={12} />
+                              </div>
+                            </div>
+                            <div className="flex items-baseline justify-between mt-1 gap-1">
+                              <span className="text-lg font-black text-strong-blue print-text">{avgGrade > 0 ? avgGrade.toFixed(2) : "0.00"}</span>
+                              <span className={`inline-block text-[8px] font-bold px-1.5 py-0.5 rounded-full ${
+                                avgGrade >= 80 ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20" : "bg-mustard/20 text-[#A67800] border border-mustard/30"
+                              }`}>
+                                {overallPredicate.desc}
+                              </span>
+                            </div>
                           </div>
 
-                          <div className="bg-zinc-50 border border-zinc-200 print-card rounded-xl p-3 text-center shadow-xs">
-                            <span className="text-[9px] text-zinc-500 print-text-muted font-bold uppercase tracking-wider block">Kehadiran</span>
-                            <p className="text-lg font-black text-emerald-600 print-text mt-0.5">{Math.round(attendancePercent)}%</p>
-                            <span className="inline-block text-[8px] font-bold px-1.5 py-0.5 rounded mt-1 bg-emerald-500/10 text-emerald-600">
-                              {attendancePercent >= 90 ? "Sangat Baik" : attendancePercent >= 75 ? "Baik" : "Kurang"}
-                            </span>
+                          {/* Card 2: Kehadiran */}
+                          <div className="bg-zinc-50/80 border border-zinc-200/90 print-card rounded-xl p-2.5 shadow-xs flex flex-col justify-between">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[9px] text-zinc-500 print-text-muted font-extrabold uppercase tracking-wider">Kehadiran</span>
+                              <div className="w-5 h-5 rounded-lg bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0">
+                                <Clock size={12} />
+                              </div>
+                            </div>
+                            <div className="flex items-baseline justify-between mt-1 gap-1">
+                              <span className="text-lg font-black text-emerald-600 print-text">{Math.round(attendancePercent)}%</span>
+                              <span className="inline-block text-[8px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 border border-emerald-500/20">
+                                {attendancePercent >= 90 ? "Sangat Baik" : attendancePercent >= 75 ? "Baik" : "Kurang"}
+                              </span>
+                            </div>
                           </div>
 
-                          <div className="bg-zinc-50 border border-zinc-200 print-card rounded-xl p-3 text-center shadow-xs">
-                            <span className="text-[9px] text-zinc-500 print-text-muted font-bold uppercase tracking-wider block">Total Hadir</span>
-                            <p className="text-lg font-black text-zinc-800 print-text mt-0.5">{(studentAttendance?.hadir || 0)}</p>
-                            <span className="inline-block text-[8px] font-bold px-1.5 py-0.5 rounded mt-1 bg-zinc-200 print-fill-card text-zinc-600 print-text-muted">
-                              {studentAttendance?.total_sesi || 0} Sesi
-                            </span>
+                          {/* Card 3: Total Hadir */}
+                          <div className="bg-zinc-50/80 border border-zinc-200/90 print-card rounded-xl p-2.5 shadow-xs flex flex-col justify-between">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[9px] text-zinc-500 print-text-muted font-extrabold uppercase tracking-wider">Total Hadir</span>
+                              <div className="w-5 h-5 rounded-lg bg-zinc-200/80 text-zinc-700 flex items-center justify-center shrink-0">
+                                <CheckCircle2 size={12} />
+                              </div>
+                            </div>
+                            <div className="flex items-baseline justify-between mt-1 gap-1">
+                              <span className="text-lg font-black text-zinc-800 print-text">{(studentAttendance?.hadir || 0)} <span className="text-[10px] font-semibold text-zinc-500">Sesi</span></span>
+                              <span className="inline-block text-[8px] font-bold px-1.5 py-0.5 rounded-full bg-zinc-200/80 print-fill-card text-zinc-600 print-text-muted border border-zinc-300/60">
+                                Dari {studentAttendance?.total_sesi || 0} Sesi
+                              </span>
+                            </div>
                           </div>
 
-                          <div className="bg-zinc-50 border border-zinc-200 print-card rounded-xl p-3 text-center shadow-xs">
-                            <span className="text-[9px] text-zinc-500 print-text-muted font-bold uppercase tracking-wider block">Predikat</span>
-                            <p className="text-lg font-black text-purple-600 print-text mt-0.5">{overallPredicate.letter}</p>
-                            <span className="inline-block text-[8px] font-bold px-1.5 py-0.5 rounded mt-1 bg-purple-500/10 text-purple-600">
-                              {overallPredicate.desc}
-                            </span>
+                          {/* Card 4: Predikat */}
+                          <div className="bg-zinc-50/80 border border-zinc-200/90 print-card rounded-xl p-2.5 shadow-xs flex flex-col justify-between">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[9px] text-zinc-500 print-text-muted font-extrabold uppercase tracking-wider">Predikat</span>
+                              <div className="w-5 h-5 rounded-lg bg-purple-500/10 text-purple-600 flex items-center justify-center shrink-0">
+                                <BookmarkCheck size={12} />
+                              </div>
+                            </div>
+                            <div className="flex items-baseline justify-between mt-1 gap-1">
+                              <span className="text-lg font-black text-purple-600 print-text">{overallPredicate.letter}</span>
+                              <span className="inline-block text-[8px] font-bold px-1.5 py-0.5 rounded-full bg-purple-500/10 text-purple-600 border border-purple-500/20">
+                                {overallPredicate.desc}
+                              </span>
+                            </div>
                           </div>
                         </div>
                       )}
@@ -2925,142 +2978,137 @@ export default function SiswaPage() {
                           ))}
                         </div>
                       ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 print-grid">
-                          {/* Grafik Kemampuan — Tabel ringkasan */}
-                          <div className="bg-white border border-zinc-200 rounded-xl p-4 space-y-2 shadow-xs print-chart-card">
-                            <h4 className="text-xs font-bold text-strong-blue tracking-wide border-b border-zinc-200 pb-2 uppercase">GRAFIK KEMAMPUAN</h4>
-                            {hasGrades ? (
-                              <div>
-                                <table className="w-full text-[10px]">
-                                  <thead>
-                                    <tr className="text-left text-zinc-500 font-bold border-b border-zinc-100">
-                                      <th className="py-1">Mata Pelajaran</th>
-                                      <th className="py-1 text-right">Nilai</th>
-                                    </tr>
-                                  </thead>
-                                  <tbody className="divide-y divide-zinc-50">
-                                    {chartItems.map((item, i) => {
-                                      const color = item.score >= 80 ? "text-emerald-600" : item.score >= 70 ? "text-blue-600" : item.score >= 60 ? "text-amber-600" : "text-red-500";
-                                      return (
-                                        <tr key={i}>
-                                          <td className="py-0.5 text-zinc-700">{item.label}</td>
-                                          <td className={`py-0.5 text-right font-bold ${color}`}>{item.score}</td>
-                                        </tr>
-                                      );
-                                    })}
-                                  </tbody>
-                                </table>
-                              </div>
-                            ) : (
-                              <div className="flex items-center justify-center text-[10px] text-zinc-500 font-medium py-8">Belum ada nilai</div>
-                            )}
+                        <div className="space-y-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 print-grid">
+                            {/* Grafik Kemampuan — Tabel ringkasan */}
+                            <div className="bg-white border border-zinc-200 rounded-xl p-4 space-y-2 shadow-xs print-chart-card">
+                              <h4 className="text-xs font-bold text-strong-blue tracking-wide border-b border-zinc-200 pb-2 uppercase">GRAFIK KEMAMPUAN</h4>
+                              {hasGrades ? (
+                                <div>
+                                  <table className="w-full text-[10px]">
+                                    <thead>
+                                      <tr className="text-left text-zinc-500 font-bold border-b border-zinc-100">
+                                        <th className="py-1">Mata Pelajaran</th>
+                                        <th className="py-1 text-right">Nilai</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-zinc-50">
+                                      {chartItems.map((item, i) => {
+                                        const color = item.score >= 80 ? "text-emerald-600" : item.score >= 70 ? "text-blue-600" : item.score >= 60 ? "text-amber-600" : "text-red-500";
+                                        return (
+                                          <tr key={i}>
+                                            <td className="py-0.5 text-zinc-700">{item.label}</td>
+                                            <td className={`py-0.5 text-right font-bold ${color}`}>{item.score}</td>
+                                          </tr>
+                                        );
+                                      })}
+                                    </tbody>
+                                  </table>
+                                </div>
+                              ) : (
+                                <div className="flex items-center justify-center text-[10px] text-zinc-500 font-medium py-8">Belum ada nilai</div>
+                              )}
+                            </div>
+
+                            {/* Distribusi Nilai — Ringkasan statis */}
+                            <div className="bg-white border border-zinc-200 rounded-xl p-4 space-y-2 shadow-xs print-chart-card">
+                              <h4 className="text-xs font-bold text-strong-blue tracking-wide border-b border-zinc-200 pb-2 uppercase">DISTRIBUSI NILAI</h4>
+                              {hasGrades ? (
+                                <div className="space-y-2 pt-1">
+                                  {[
+                                    { label: "A (80-100)", count: countA, color: "bg-emerald-500" },
+                                    { label: "B (70-79)", count: countB, color: "bg-blue-500" },
+                                    { label: "C (60-69)", count: countC, color: "bg-amber-500" },
+                                    { label: "D (<60)", count: countD, color: "bg-red-500" },
+                                  ].map((item) => (
+                                    <div key={item.label} className="flex items-center gap-2 text-[10px]">
+                                      <span className={`w-2.5 h-2.5 rounded-full ${item.color}`} />
+                                      <span className="flex-1 text-zinc-600 font-medium">{item.label}</span>
+                                      <span className="font-bold text-zinc-800">{item.count} Mapel</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <div className="h-[160px] flex items-center justify-center text-[10px] text-zinc-500 font-medium">Belum ada nilai</div>
+                              )}
+                            </div>
                           </div>
 
-                          {/* Distribusi Nilai — Ringkasan statis (Pie chart alternative) */}
+                          {/* Data Kehadiran — Di bawah Grafik Kemampuan & Distribusi Nilai */}
                           <div className="bg-white border border-zinc-200 rounded-xl p-4 space-y-2 shadow-xs print-chart-card">
-                            <h4 className="text-xs font-bold text-strong-blue tracking-wide border-b border-zinc-200 pb-2 uppercase">DISTRIBUSI NILAI</h4>
-                            {hasGrades ? (
-                              <div className="space-y-2 pt-1">
-                                {[
-                                  { label: "A (80-100)", count: countA, color: "bg-emerald-500" },
-                                  { label: "B (70-79)", count: countB, color: "bg-blue-500" },
-                                  { label: "C (60-69)", count: countC, color: "bg-amber-500" },
-                                  { label: "D (<60)", count: countD, color: "bg-red-500" },
-                                ].map((item) => (
-                                  <div key={item.label} className="flex items-center gap-2 text-[10px]">
-                                    <span className={`w-2.5 h-2.5 rounded-full ${item.color}`} />
-                                    <span className="flex-1 text-zinc-600 font-medium">{item.label}</span>
-                                    <span className="font-bold text-zinc-800">{item.count} Mapel</span>
-                                  </div>
-                                ))}
-                              </div>
-                            ) : (
-                              <div className="h-[160px] flex items-center justify-center text-[10px] text-zinc-500 font-medium">Belum ada nilai</div>
-                            )}
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Detail Nilai & Kehadiran Table */}
-                      {loadingDetails ? (
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-pulse bg-white border border-zinc-200 rounded-xl p-6">
-                          <div className="md:col-span-1 space-y-4">
-                            <div className="h-4 bg-zinc-200 rounded w-24" />
-                            <div className="h-32 bg-zinc-50 rounded-xl" />
-                          </div>
-                          <div className="md:col-span-2 space-y-4">
-                            <div className="h-4 bg-zinc-200 rounded w-24" />
-                            <div className="h-32 bg-zinc-50 rounded-xl" />
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                          <div className="md:col-span-1 space-y-2">
-                            <h4 className="text-xs font-bold text-strong-blue print-text tracking-wide border-b-2 print-border border-zinc-200 pb-2 uppercase">KEHADIRAN</h4>
+                            <h4 className="text-xs font-bold text-strong-blue print-text tracking-wide border-b border-zinc-200 pb-2 uppercase">KEHADIRAN</h4>
                             <table className="w-full text-xs text-zinc-600 print-text-muted">
                               <thead>
                                 <tr className="border-b border-zinc-200 print-border">
-                                  <th className="py-2 text-left">Keterangan</th>
-                                  <th className="py-2 text-right">Jumlah</th>
+                                  <th className="py-2 text-left font-bold">Keterangan</th>
+                                  <th className="py-2 text-right font-bold">Jumlah Sesi</th>
                                 </tr>
                               </thead>
                               <tbody className="divide-y divide-zinc-200 print-border">
                                 <tr>
                                   <td className="py-2 font-medium text-zinc-800 print-text">Hadir</td>
-                                  <td className="py-2 text-right font-bold">{(studentAttendance?.hadir || 0)} Sesi</td>
+                                  <td className="py-2 text-right font-bold text-zinc-900 print-text">{(studentAttendance?.hadir || 0)} Sesi</td>
                                 </tr>
                                 <tr>
                                   <td className="py-2 font-medium text-zinc-800 print-text">Sakit</td>
-                                  <td className="py-2 text-right font-bold">{(studentAttendance?.sakit || 0)} Sesi</td>
+                                  <td className="py-2 text-right font-bold text-zinc-900 print-text">{(studentAttendance?.sakit || 0)} Sesi</td>
                                 </tr>
                                 <tr>
                                   <td className="py-2 font-medium text-zinc-800 print-text">Izin</td>
-                                  <td className="py-2 text-right font-bold">{(studentAttendance?.izin || 0)} Sesi</td>
+                                  <td className="py-2 text-right font-bold text-zinc-900 print-text">{(studentAttendance?.izin || 0)} Sesi</td>
                                 </tr>
                                 <tr>
                                   <td className="py-2 font-medium text-zinc-800 print-text">Alpa (Alpha)</td>
-                                  <td className="py-2 text-right font-bold">{(studentAttendance?.alpha || 0)} Sesi</td>
+                                  <td className="py-2 text-right font-bold text-zinc-900 print-text">{(studentAttendance?.alpha || 0)} Sesi</td>
                                 </tr>
                               </tbody>
                             </table>
                           </div>
+                        </div>
+                      )}
 
-                          <div className="md:col-span-2 space-y-2">
-                            <h4 className="text-xs font-bold text-strong-blue print-text tracking-wide border-b-2 print-border border-zinc-200 pb-2 uppercase">DETAIL NILAI</h4>
-                            <table className="w-full text-xs text-zinc-600 print-text-muted">
-                              <thead>
-                                <tr className="border-b border-zinc-200 print-border">
-                                  <th className="py-2 text-left">Mata Pelajaran</th>
-                                  <th className="py-2 text-left">Materi</th>
-                                  <th className="py-2 text-center w-24">Tentor</th>
-                                  <th className="py-2 text-center w-28">Waktu</th>
-                                  <th className="py-2 text-right w-16">Skor</th>
+                      {/* Detail Nilai Table (Full Width) */}
+                      {loadingDetails ? (
+                        <div className="space-y-4 animate-pulse bg-white border border-zinc-200 rounded-xl p-6">
+                          <div className="h-4 bg-zinc-200 rounded w-24" />
+                          <div className="h-32 bg-zinc-50 rounded-xl" />
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <h4 className="text-xs font-bold text-strong-blue print-text tracking-wide border-b-2 print-border border-zinc-200 pb-2 uppercase">DETAIL NILAI</h4>
+                          <table className="w-full text-xs text-zinc-600 print-text-muted">
+                            <thead>
+                              <tr className="border-b border-zinc-200 print-border">
+                                <th className="py-2 text-left">Mata Pelajaran</th>
+                                <th className="py-2 text-left">Materi</th>
+                                <th className="py-2 text-center w-24">Tentor</th>
+                                <th className="py-2 text-center w-28">Waktu</th>
+                                <th className="py-2 text-right w-16">Skor</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-zinc-200 print-border">
+                              {studentGrades.map((g) => (
+                                <tr key={g.id}>
+                                  <td className="py-2 font-medium text-zinc-800 print-text">
+                                    {g.nama_mapel} <span className="text-[10px] text-zinc-400 font-medium">({g.kategori})</span>
+                                  </td>
+                                  <td className="py-2 italic text-zinc-500 line-clamp-1">{g.materi || "-"}</td>
+                                  <td className="py-2 text-center text-zinc-500 font-mono text-[11px]">{g.kode_tentor || "-"}</td>
+                                  <td className="py-2 text-center text-zinc-500 font-mono text-[10px]">
+                                    {g.tanggal_pembelajaran
+                                      ? `${new Date(g.tanggal_pembelajaran).toLocaleDateString("id-ID", { day: '2-digit', month: 'short', year: 'numeric' })}${g.jam ? `, ${g.jam}` : ""}`
+                                      : "-"}
+                                  </td>
+                                  <td className="py-2 text-right font-bold text-strong-blue print-text">{g.skor}</td>
                                 </tr>
-                              </thead>
-                              <tbody className="divide-y divide-zinc-200 print-border">
-                                {studentGrades.map((g) => (
-                                  <tr key={g.id}>
-                                    <td className="py-2 font-medium text-zinc-800 print-text">
-                                      {g.nama_mapel} <span className="text-[10px] text-zinc-400 font-medium">({g.kategori})</span>
-                                    </td>
-                                    <td className="py-2 italic text-zinc-500 line-clamp-1">{g.materi || "-"}</td>
-                                    <td className="py-2 text-center text-zinc-500 font-mono text-[11px]">{g.kode_tentor || "-"}</td>
-                                    <td className="py-2 text-center text-zinc-500 font-mono text-[10px]">
-                                      {g.tanggal_pembelajaran
-                                        ? `${new Date(g.tanggal_pembelajaran).toLocaleDateString("id-ID", { day: '2-digit', month: 'short', year: 'numeric' })}${g.jam ? `, ${g.jam}` : ""}`
-                                        : "-"}
-                                    </td>
-                                    <td className="py-2 text-right font-bold text-strong-blue print-text">{g.skor}</td>
-                                  </tr>
-                                ))}
-                                {studentGrades.length === 0 && (
-                                  <tr>
-                                    <td colSpan={5} className="py-4 text-center text-zinc-500 italic">Belum ada nilai terinput.</td>
-                                  </tr>
-                                )}
-                              </tbody>
-                            </table>
-                          </div>
+                              ))}
+                              {studentGrades.length === 0 && (
+                                <tr>
+                                  <td colSpan={5} className="py-4 text-center text-zinc-500 italic">Belum ada nilai terinput.</td>
+                                </tr>
+                              )}
+                            </tbody>
+                          </table>
                         </div>
                       )}
 
