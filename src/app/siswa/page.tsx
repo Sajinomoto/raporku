@@ -36,7 +36,8 @@ import {
   FileImage,
   Download
 } from "lucide-react";
-import { toPng } from "html-to-image";
+import { pdf } from "@react-pdf/renderer";
+import RaporPDF from "@/components/rapor-pdf";
 
 // Dynamically import ReactApexChart to prevent SSR window error
 const ReactApexChart = dynamic(() => import("react-apexcharts"), { ssr: false });
@@ -1163,64 +1164,48 @@ export default function SiswaPage() {
     }, 150);
   };
 
-  const handleDownloadLongImage = async () => {
+  const handleDownloadPDF = async () => {
     setIsPrintDropdownOpen(false);
-    setActiveTab("rapor");
-    setPreviewMode("long");
     setIsDownloadingImage(true);
 
-    // Tunggu 1 frame render agar state "previewMode=long" diproses React terlebih dulu
-    requestAnimationFrame(async () => {
-      const el = longReportRef.current;
-      if (!el) {
-        setIsDownloadingImage(false);
-        return;
-      }
+    try {
+      const pdfDoc = pdf(
+        <RaporPDF
+          student={selectedStudent!}
+          grades={studentGrades}
+          attendance={studentAttendance}
+          note={studentNote}
+          classes={classes}
+          avgGrade={avgGrade}
+          attendancePercent={attendancePercent}
+          overallPredicate={overallPredicate}
+          chartItems={chartItems}
+          countA={countA}
+          countB={countB}
+          countC={countC}
+          countD={countD}
+        />
+      );
 
-      try {
-        const width = el.scrollWidth || el.offsetWidth || 800;
-        const height = el.scrollHeight || el.offsetHeight || 1200;
+      const blob = await pdfDoc.toBlob();
 
-        const dataUrl = await toPng(el, {
-          width,
-          height,
-          pixelRatio: 1.25,
-          backgroundColor: "#ffffff",
-          cacheBust: true,
-          style: {
-            display: "block",
-            visibility: "visible",
-            transform: "none",
-          },
-        });
-
-        if (!dataUrl || dataUrl.length < 500) {
-          throw new Error("Generated PNG image is empty");
-        }
-
-        const link = document.createElement("a");
-        const cleanName = selectedStudent?.nama_lengkap
-          ? selectedStudent.nama_lengkap.replace(/\s+/g, "_")
-          : "Siswa";
-        link.download = `Rapor_${cleanName}_${selectedStudent?.nis || ""}.png`;
-        link.href = dataUrl;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-      } catch (err) {
-        // html-to-image kadang melempar Event (native DOM event) bukan Error object
-        // Deteksi dan beri pesan yang lebih jelas
-        if (err instanceof Event) {
-          const imgTarget = err.target as HTMLImageElement | null;
-          console.error("Long image PNG failed — image load error on:", imgTarget?.src || "unknown");
-        } else {
-          console.error("Error generating long image PNG:", err);
-        }
-        alert("Gagal mengunduh gambar. Silakan coba gunakan mode Cetak A4 sebagai alternatif.");
-      } finally {
-        setIsDownloadingImage(false);
-      }
-    });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      const cleanName = selectedStudent?.nama_lengkap
+        ? selectedStudent.nama_lengkap.replace(/\s+/g, "_")
+        : "Siswa";
+      link.download = `Rapor_${cleanName}_${selectedStudent?.nis || ""}.pdf`;
+      link.href = url;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Error generating PDF:", err);
+      alert("Gagal mengunduh PDF. Silakan coba gunakan mode Cetak A4.");
+    } finally {
+      setIsDownloadingImage(false);
+    }
   };
 
   // Filter students
@@ -1857,7 +1842,7 @@ export default function SiswaPage() {
                     <button
                       type="button"
                       disabled={isDownloadingImage}
-                      onClick={handleDownloadLongImage}
+                      onClick={handleDownloadPDF}
                       className="w-full text-left px-3 py-2 text-xs text-zinc-700 hover:bg-zinc-50 hover:text-strong-blue font-bold flex items-center justify-between transition-colors cursor-pointer group border-t border-zinc-100 disabled:opacity-50"
                     >
                       <div className="flex items-center gap-2">
@@ -1870,11 +1855,10 @@ export default function SiswaPage() {
                           <Download size={15} className="text-amber-600" />
                         )}
                         <div>
-                          <span className="block">{isDownloadingImage ? "Mengunduh Gambar..." : "Unduh Long Image (PNG)"}</span>
-                          <span className="text-[10px] text-zinc-400 font-normal">Langsung unduh PNG tanpa dialog PDF</span>
+                          <span className="block">{isDownloadingImage ? "Mengunduh PDF..." : "Unduh PDF Rapor"}</span>
+                          <span className="text-[10px] text-zinc-400 font-normal">Langsung unduh PDF tanpa dialog</span>
                         </div>
                       </div>
-                      {previewMode === "long" && <span className="w-1.5 h-1.5 rounded-full bg-strong-blue" />}
                     </button>
                   </div>
                 )}
