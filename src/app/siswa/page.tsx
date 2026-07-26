@@ -1225,7 +1225,11 @@ export default function SiswaPage() {
       textAnchor: "start" as const,
       offsetX: 6,
       style: {
-        colors: ["#002583"],
+        colors: [
+          function ({ value }: { value: number }) {
+            return value >= 95 ? "#ffffff" : "#002583";
+          }
+        ],
         fontSize: "10px",
         fontWeight: 700,
       },
