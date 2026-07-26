@@ -2638,19 +2638,27 @@ export default function SiswaPage() {
                                   </thead>
                                   <tbody className="divide-y divide-zinc-200 print-border text-[11px]">
                                     <tr>
-                                      <td className="py-1 font-medium text-zinc-800 print-text">Hadir</td>
-                                      <td className="py-1 text-right font-bold text-zinc-900 print-text">{(studentAttendance?.hadir || 0)} Sesi</td>
+                                      <td className="py-1 font-medium text-zinc-800 print-text flex items-center gap-1.5">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block shrink-0"></span> Hadir
+                                      </td>
+                                      <td className="py-1 text-right font-bold text-emerald-600 print-text">{(studentAttendance?.hadir || 0)} Sesi</td>
                                     </tr>
                                     <tr>
-                                      <td className="py-1 font-medium text-zinc-800 print-text">Sakit</td>
+                                      <td className="py-1 font-medium text-zinc-800 print-text flex items-center gap-1.5">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500 inline-block shrink-0"></span> Sakit
+                                      </td>
                                       <td className="py-1 text-right font-bold text-zinc-900 print-text">{(studentAttendance?.sakit || 0)} Sesi</td>
                                     </tr>
                                     <tr>
-                                      <td className="py-1 font-medium text-zinc-800 print-text">Izin</td>
+                                      <td className="py-1 font-medium text-zinc-800 print-text flex items-center gap-1.5">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block shrink-0"></span> Izin
+                                      </td>
                                       <td className="py-1 text-right font-bold text-zinc-900 print-text">{(studentAttendance?.izin || 0)} Sesi</td>
                                     </tr>
                                     <tr>
-                                      <td className="py-1 font-medium text-zinc-800 print-text">Alpa (Alpha)</td>
+                                      <td className="py-1 font-medium text-zinc-800 print-text flex items-center gap-1.5">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-rose-500 inline-block shrink-0"></span> Alpa (Alpha)
+                                      </td>
                                       <td className="py-1 text-right font-bold text-zinc-900 print-text">{(studentAttendance?.alpha || 0)} Sesi</td>
                                     </tr>
                                   </tbody>
