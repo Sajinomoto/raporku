@@ -1337,6 +1337,57 @@ export default function SiswaPage() {
     }
   ];
 
+  const subjectCount = hasAggregated ? aggregatedGrades.length : studentGrades.length;
+
+  // Chart configuration: Radial Bar (for single/dual subjects < 3)
+  const radialChartOptions = {
+    chart: {
+      id: "radial-single",
+      toolbar: { show: false },
+      foreColor: "#475569",
+      animations: { enabled: false },
+    },
+    plotOptions: {
+      radialBar: {
+        hollow: {
+          size: "62%",
+        },
+        track: {
+          background: "#f1f5f9",
+          strokeWidth: "100%",
+        },
+        dataLabels: {
+          show: true,
+          name: {
+            offsetY: -6,
+            show: true,
+            color: "#64748b",
+            fontSize: "9px",
+            fontWeight: 600,
+          },
+          value: {
+            offsetY: 2,
+            color: "#002583",
+            fontSize: "13px",
+            fontWeight: 800,
+            show: true,
+            formatter: function (val: number) {
+              return String(val);
+            }
+          }
+        }
+      }
+    },
+    colors: [avgGrade >= 80 ? "#10b981" : avgGrade >= 70 ? "#002583" : avgGrade >= 60 ? "#f59e0b" : "#ef4444"],
+    labels: hasAggregated
+      ? aggregatedGrades.map(g => cleanSubjectName(g.nama_mapel))
+      : studentGrades.map(g => cleanSubjectName(g.nama_mapel)),
+  };
+
+  const radialChartSeries = hasAggregated
+    ? aggregatedGrades.map(g => g.rataRata)
+    : studentGrades.map(g => g.skor);
+
   // Chart configuration: Donut Distribution (based on aggregated averages)
   // Each subject's average score determines the grade category
   const countA = hasAggregated
@@ -2442,12 +2493,21 @@ export default function SiswaPage() {
                                   <h4 className="text-[11px] font-bold text-strong-blue tracking-wide border-b border-zinc-200 pb-1.5 uppercase">GRAFIK KEMAMPUAN</h4>
                                   {studentGrades.length > 0 ? (
                                     <div className="flex-1 flex items-center justify-center pt-1">
-                                      <ReactApexChart 
-                                        options={radarChartOptions} 
-                                        series={radarChartSeries} 
-                                        type="radar" 
-                                        height={145} 
-                                      />
+                                      {subjectCount >= 3 ? (
+                                        <ReactApexChart 
+                                          options={radarChartOptions} 
+                                          series={radarChartSeries} 
+                                          type="radar" 
+                                          height={145} 
+                                        />
+                                      ) : (
+                                        <ReactApexChart 
+                                          options={radialChartOptions} 
+                                          series={radialChartSeries} 
+                                          type="radialBar" 
+                                          height={150} 
+                                        />
+                                      )}
                                     </div>
                                   ) : (
                                     <div className="h-[145px] flex items-center justify-center text-[10px] text-zinc-500 font-medium">Belum ada nilai</div>
