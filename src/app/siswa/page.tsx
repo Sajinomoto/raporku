@@ -1317,7 +1317,8 @@ export default function SiswaPage() {
       categories: hasAggregated 
         ? aggregatedGrades.map(g => cleanSubjectName(g.nama_mapel))
         : studentGrades.map(g => cleanSubjectName(g.nama_mapel)),
-      max: 105,
+      min: 0,
+      max: 100,
       tickAmount: 5,
       labels: {
         style: {
