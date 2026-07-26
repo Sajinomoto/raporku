@@ -1293,16 +1293,31 @@ export default function SiswaPage() {
       bar: {
         horizontal: true,
         barHeight: "55%",
-        borderRadius: 3,
+        borderRadius: 4,
+        dataLabels: {
+          position: "top",
+        }
       }
     },
     colors: ["#002583"],
-    dataLabels: { enabled: false },
+    dataLabels: {
+      enabled: true,
+      textAnchor: "start" as const,
+      offsetX: 6,
+      style: {
+        colors: ["#002583"],
+        fontSize: "10px",
+        fontWeight: 700,
+      },
+      formatter: function (val: number) {
+        return String(val);
+      }
+    },
     xaxis: {
       categories: hasAggregated 
         ? aggregatedGrades.map(g => cleanSubjectName(g.nama_mapel))
         : studentGrades.map(g => cleanSubjectName(g.nama_mapel)),
-      max: 100,
+      max: 105,
       labels: {
         style: {
           fontWeight: 600,
@@ -1322,7 +1337,7 @@ export default function SiswaPage() {
     },
     grid: {
       borderColor: "#e2e8f0",
-      padding: { top: 0, right: 10, bottom: 0, left: 5 },
+      padding: { top: 0, right: 30, bottom: 0, left: 5 },
       xaxis: { lines: { show: true } }
     }
   };
@@ -2506,20 +2521,29 @@ export default function SiswaPage() {
                             </div>
                           )}
 
-                          {/* Visualisasi Grafik Row (ApexCharts - Optimized for 3 Columns) */}
+                          {/* Visualisasi Grafik (Baris 1: Bar Chart Full Width, Baris 2: Radar & Donut 2 Kolom) */}
                           {loadingDetails ? (
-                            <div className="grid grid-cols-1 gap-4 print-grid">
-                              {Array(3).fill(0).map((_, idx) => (
-                                <div key={idx} className="bg-white border border-zinc-200 rounded-xl p-4 h-[220px] flex flex-col justify-center items-center gap-2 animate-pulse">
-                                  <div className="h-3.5 bg-zinc-200 rounded w-28" />
-                                  <div className="w-full flex-1 bg-zinc-50 rounded-xl flex items-center justify-center text-[10px] text-zinc-400 font-bold uppercase tracking-wider">
-                                    Memuat grafik...
-                                  </div>
+                            <div className="space-y-3">
+                              <div className="bg-white border border-zinc-200 rounded-xl p-3 h-[140px] flex flex-col justify-center items-center gap-2 animate-pulse">
+                                <div className="h-3.5 bg-zinc-200 rounded w-28" />
+                                <div className="w-full flex-1 bg-zinc-50 rounded-xl flex items-center justify-center text-[10px] text-zinc-400 font-bold uppercase tracking-wider">
+                                  Memuat grafik...
                                 </div>
-                              ))}
+                              </div>
+                              <div className="grid grid-cols-2 gap-3">
+                                {Array(2).fill(0).map((_, idx) => (
+                                  <div key={idx} className="bg-white border border-zinc-200 rounded-xl p-3 h-[155px] flex flex-col justify-center items-center gap-2 animate-pulse">
+                                    <div className="h-3.5 bg-zinc-200 rounded w-28" />
+                                    <div className="w-full flex-1 bg-zinc-50 rounded-xl flex items-center justify-center text-[10px] text-zinc-400 font-bold uppercase tracking-wider">
+                                      Memuat grafik...
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
                             </div>
                           ) : (
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 print-grid">
+                            <div className="space-y-3">
+                              {/* Baris 1: Nilai Setiap Mapel (Full Width) */}
                               <div className="bg-white border border-zinc-200 rounded-xl p-3 space-y-1 shadow-2xs print-chart-card overflow-hidden">
                                 <h4 className="text-[11px] font-bold text-strong-blue tracking-wide border-b border-zinc-200 pb-1.5 uppercase">NILAI SETIAP MAPEL</h4>
                                 {studentGrades.length > 0 ? (
@@ -2527,39 +2551,42 @@ export default function SiswaPage() {
                                     options={barChartOptions} 
                                     series={barChartSeries} 
                                     type="bar" 
-                                    height={190} 
+                                    height={140} 
                                   />
                                 ) : (
-                                  <div className="h-[190px] flex items-center justify-center text-[10px] text-zinc-500 font-medium">Belum ada nilai</div>
+                                  <div className="h-[140px] flex items-center justify-center text-[10px] text-zinc-500 font-medium">Belum ada nilai</div>
                                 )}
                               </div>
 
-                              <div className="bg-white border border-zinc-200 rounded-xl p-3 space-y-1 shadow-2xs print-chart-card overflow-hidden">
-                                <h4 className="text-[11px] font-bold text-strong-blue tracking-wide border-b border-zinc-200 pb-1.5 uppercase">GRAFIK KEMAMPUAN</h4>
-                                {studentGrades.length > 0 ? (
-                                  <ReactApexChart 
-                                    options={radarChartOptions} 
-                                    series={radarChartSeries} 
-                                    type="radar" 
-                                    height={190} 
-                                  />
-                                ) : (
-                                  <div className="h-[190px] flex items-center justify-center text-[10px] text-zinc-500 font-medium">Belum ada nilai</div>
-                                )}
-                              </div>
+                              {/* Baris 2: Grafik Kemampuan & Distribusi Nilai (2 Kolom Sejajar) */}
+                              <div className="grid grid-cols-2 gap-3">
+                                <div className="bg-white border border-zinc-200 rounded-xl p-3 space-y-1 shadow-2xs print-chart-card overflow-hidden">
+                                  <h4 className="text-[11px] font-bold text-strong-blue tracking-wide border-b border-zinc-200 pb-1.5 uppercase">GRAFIK KEMAMPUAN</h4>
+                                  {studentGrades.length > 0 ? (
+                                    <ReactApexChart 
+                                      options={radarChartOptions} 
+                                      series={radarChartSeries} 
+                                      type="radar" 
+                                      height={155} 
+                                    />
+                                  ) : (
+                                    <div className="h-[155px] flex items-center justify-center text-[10px] text-zinc-500 font-medium">Belum ada nilai</div>
+                                  )}
+                                </div>
 
-                              <div className="bg-white border border-zinc-200 rounded-xl p-3 space-y-1 shadow-2xs print-chart-card overflow-hidden">
-                                <h4 className="text-[11px] font-bold text-strong-blue tracking-wide border-b border-zinc-200 pb-1.5 uppercase">DISTRIBUSI NILAI</h4>
-                                {studentGrades.length > 0 ? (
-                                  <ReactApexChart 
-                                    options={donutChartOptions} 
-                                    series={donutChartSeries} 
-                                    type="donut" 
-                                    height={190} 
-                                  />
-                                ) : (
-                                  <div className="h-[190px] flex items-center justify-center text-[10px] text-zinc-500 font-medium">Belum ada nilai</div>
-                                )}
+                                <div className="bg-white border border-zinc-200 rounded-xl p-3 space-y-1 shadow-2xs print-chart-card overflow-hidden">
+                                  <h4 className="text-[11px] font-bold text-strong-blue tracking-wide border-b border-zinc-200 pb-1.5 uppercase">DISTRIBUSI NILAI</h4>
+                                  {studentGrades.length > 0 ? (
+                                    <ReactApexChart 
+                                      options={donutChartOptions} 
+                                      series={donutChartSeries} 
+                                      type="donut" 
+                                      height={155} 
+                                    />
+                                  ) : (
+                                    <div className="h-[155px] flex items-center justify-center text-[10px] text-zinc-500 font-medium">Belum ada nilai</div>
+                                  )}
+                                </div>
                               </div>
                             </div>
                           )}
