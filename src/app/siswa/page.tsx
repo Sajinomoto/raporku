@@ -33,7 +33,11 @@ import {
   GraduationCap,
   ChevronDown,
   FileText,
+  Download,
+  Loader2
 } from "lucide-react";
+import { toPng } from "html-to-image";
+import jsPDF from "jspdf";
 
 // Dynamically import ReactApexChart to prevent SSR window error
 const ReactApexChart = dynamic(() => import("react-apexcharts"), { ssr: false });
@@ -188,6 +192,7 @@ export default function SiswaPage() {
   const [calendarMonth, setCalendarMonth] = useState<number>(new Date().getMonth());
   const [confirmDeleteStudent, setConfirmDeleteStudent] = useState<Siswa | null>(null);
   const [toast, setToast] = useState<{ text: string; type: "success" | "error" } | null>(null);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
   const showToast = (text: string, type: "success" | "error" = "success", duration: number = 3000) => {
     setToast({ text, type });
@@ -205,6 +210,42 @@ export default function SiswaPage() {
 
   // Ref for print area
   const printRef = useRef<HTMLDivElement>(null);
+
+  const handleDownloadPdf = async () => {
+    if (!selectedStudent || !printRef.current) return;
+    setIsGeneratingPdf(true);
+
+    try {
+      const pageElements = Array.from(printRef.current.children) as HTMLElement[];
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4",
+      });
+
+      for (let i = 0; i < pageElements.length; i++) {
+        const el = pageElements[i];
+        const dataUrl = await toPng(el, {
+          pixelRatio: 2,
+          backgroundColor: "#ffffff",
+        });
+
+        if (i > 0) {
+          pdf.addPage("a4", "portrait");
+        }
+
+        pdf.addImage(dataUrl, "PNG", 0, 0, 210, 297, undefined, "FAST");
+      }
+
+      const fileName = `Rapor_${selectedStudent.nama_lengkap.replace(/\s+/g, "_")}_${selectedStudent.nis}.pdf`;
+      pdf.save(fileName);
+    } catch (err) {
+      console.error("Gagal mendownload PDF:", err);
+      showToast("Gagal mendownload PDF. Silakan coba lagi.", "error");
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
 
   useEffect(() => {
     fetchStudents();
@@ -1788,15 +1829,34 @@ export default function SiswaPage() {
             </div>
             
             <div className="flex flex-wrap items-center gap-3 justify-end">
-              {/* Tombol Print Rapor (Hanya tampil saat tab 'rapor') */}
+              {/* Tombol Action Rapor (Hanya tampil saat tab 'rapor') */}
               {activeTab === "rapor" && (
-                <button
-                  type="button"
-                  onClick={handlePrintA4}
-                  className="flex items-center gap-2 px-4 py-2 bg-strong-blue hover:bg-[#001D6E] text-white rounded-lg text-xs font-bold transition-all shadow-md shadow-strong-blue/10 cursor-pointer active:scale-95"
-                >
-                  <Printer size={14} /> Cetak / Simpan PDF
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleDownloadPdf}
+                    disabled={isGeneratingPdf}
+                    className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-all shadow-md shadow-emerald-600/10 cursor-pointer active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isGeneratingPdf ? (
+                      <>
+                        <Loader2 size={14} className="animate-spin" /> Mengunduh PDF...
+                      </>
+                    ) : (
+                      <>
+                        <Download size={14} /> Download PDF
+                      </>
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handlePrintA4}
+                    className="flex items-center gap-2 px-4 py-2 bg-strong-blue hover:bg-[#001D6E] text-white rounded-lg text-xs font-bold transition-all shadow-md shadow-strong-blue/10 cursor-pointer active:scale-95"
+                  >
+                    <Printer size={14} /> Cetak
+                  </button>
+                </div>
               )}
 
               <button
