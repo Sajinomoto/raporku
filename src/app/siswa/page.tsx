@@ -1339,7 +1339,7 @@ export default function SiswaPage() {
     },
     grid: {
       borderColor: "#e2e8f0",
-      padding: { top: 0, right: 55, bottom: 0, left: 10 },
+      padding: { top: 0, right: 35, bottom: 0, left: 10 },
       xaxis: { lines: { show: true } }
     }
   };
@@ -2580,12 +2580,14 @@ export default function SiswaPage() {
                               <div className="bg-white border border-zinc-200 rounded-xl p-3 space-y-1 shadow-2xs print-chart-card overflow-hidden">
                                 <h4 className="text-[11px] font-bold text-strong-blue tracking-wide border-b border-zinc-200 pb-1.5 uppercase">NILAI SETIAP MAPEL</h4>
                                 {studentGrades.length > 0 ? (
-                                  <ReactApexChart 
-                                    options={barChartOptions} 
-                                    series={barChartSeries} 
-                                    type="bar" 
-                                    height={130} 
-                                  />
+                                  <div className="max-w-[480px]">
+                                    <ReactApexChart 
+                                      options={barChartOptions} 
+                                      series={barChartSeries} 
+                                      type="bar" 
+                                      height={135} 
+                                    />
+                                  </div>
                                 ) : (
                                   <div className="h-[130px] flex items-center justify-center text-[10px] text-zinc-500 font-medium">Belum ada nilai</div>
                                 )}
