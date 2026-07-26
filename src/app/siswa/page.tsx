@@ -1292,7 +1292,7 @@ export default function SiswaPage() {
     plotOptions: {
       bar: {
         horizontal: true,
-        barHeight: "50%",
+        barHeight: "45%",
         borderRadius: 3,
         dataLabels: {
           position: "top",
@@ -1339,7 +1339,7 @@ export default function SiswaPage() {
     },
     grid: {
       borderColor: "#e2e8f0",
-      padding: { top: 0, right: 30, bottom: 0, left: 5 },
+      padding: { top: 0, right: 55, bottom: 0, left: 10 },
       xaxis: { lines: { show: true } }
     }
   };
