@@ -1469,15 +1469,17 @@ export default function SiswaPage() {
             show: true,
             name: {
               show: true,
-              fontSize: "9px",
+              fontSize: "8px",
               fontWeight: 600,
               color: "#64748b",
+              offsetY: -5,
             },
             value: {
               show: true,
-              fontSize: "14px",
+              fontSize: "12px",
               fontWeight: 800,
               color: "#0f172a",
+              offsetY: 1,
             },
             total: {
               show: true,
