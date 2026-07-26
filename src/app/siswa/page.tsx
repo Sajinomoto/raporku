@@ -2734,7 +2734,7 @@ export default function SiswaPage() {
                     </>
                   ) : (
                     /* MODE LONG IMAGE: Format Tunggal Memanjang (Direct PNG Download target via longReportRef) */
-                    <div ref={longReportRef} className="bg-white border border-zinc-200 rounded-xl p-8 space-y-8 shadow-2xl text-zinc-800">
+                    <div ref={longReportRef} className="bg-white border border-zinc-200 rounded-xl p-8 space-y-5 shadow-2xl text-zinc-800">
                       {/* Header Rapor */}
                       <div className="flex justify-between items-center border-b-2 print-border pb-4">
                         <div className="flex items-center gap-3">
@@ -2774,7 +2774,7 @@ export default function SiswaPage() {
                         <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-0.5 text-[11px]">
                           <div className="flex items-baseline gap-2 py-0.5">
                             <span className="text-zinc-400 print-text-muted shrink-0">Nama</span>
-                            <span className="text-zinc-800 print-text font-semibold truncate">{selectedStudent.nama_lengkap}</span>
+                            <span className="text-zinc-800 print-text font-semibold break-words">{selectedStudent.nama_lengkap}</span>
                           </div>
                           <div className="flex items-baseline gap-2 py-0.5">
                             <span className="text-zinc-400 print-text-muted shrink-0">NIS</span>
@@ -2792,7 +2792,7 @@ export default function SiswaPage() {
                           </div>
                           <div className="flex items-baseline gap-2 py-0.5 sm:col-span-2">
                             <span className="text-zinc-400 print-text-muted shrink-0">Asal Sekolah</span>
-                            <span className="text-zinc-800 print-text font-semibold truncate">{selectedStudent.asal_sekolah}</span>
+                            <span className="text-zinc-800 print-text font-semibold break-words">{selectedStudent.asal_sekolah}</span>
                           </div>
                         </div>
                       </div>
@@ -2855,16 +2855,16 @@ export default function SiswaPage() {
                           </div>
                         </div>
                       ) : (
-                        <div className="bg-white border border-zinc-200 rounded-xl p-4 space-y-2 shadow-xs print-chart-card overflow-hidden">
+                        <div className="bg-white border border-zinc-200 rounded-xl p-4 space-y-2 shadow-xs print-chart-card">
                           <h4 className="text-xs font-bold text-strong-blue tracking-wide border-b border-zinc-200 pb-2 uppercase">NILAI SETIAP MAPEL</h4>
                           {hasGrades ? (
-                            <div className="space-y-1.5 max-h-[140px] overflow-y-auto">
+                            <div className="space-y-1.5">
                               {chartItems.map((item, i) => {
                                 const barWidth = Math.max(8, Math.min(100, item.score || 0));
                                 return (
                                   <div key={i} className="flex items-center gap-2 text-[10px]">
-                                    <span className="w-20 shrink-0 truncate text-zinc-600 font-medium text-right">{item.label}</span>
-                                    <div className="flex-1 bg-zinc-100 rounded-full h-3 overflow-hidden">
+                                    <span className="w-20 shrink-0 text-zinc-600 font-medium text-right break-words">{item.label}</span>
+                                    <div className="flex-1 bg-zinc-100 rounded-full h-3">
                                       <div
                                         className="h-full rounded-full bg-strong-blue"
                                         style={{ width: `${barWidth}%` }}
@@ -2876,7 +2876,7 @@ export default function SiswaPage() {
                               })}
                             </div>
                           ) : (
-                            <div className="h-[140px] flex items-center justify-center text-[10px] text-zinc-500 font-medium">Belum ada nilai</div>
+                            <div className="flex items-center justify-center text-[10px] text-zinc-500 font-medium py-8">Belum ada nilai</div>
                           )}
                         </div>
                       )}
@@ -2896,10 +2896,10 @@ export default function SiswaPage() {
                       ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 print-grid">
                           {/* Grafik Kemampuan — Tabel ringkasan */}
-                          <div className="bg-white border border-zinc-200 rounded-xl p-4 space-y-2 shadow-xs print-chart-card overflow-hidden">
+                          <div className="bg-white border border-zinc-200 rounded-xl p-4 space-y-2 shadow-xs print-chart-card">
                             <h4 className="text-xs font-bold text-strong-blue tracking-wide border-b border-zinc-200 pb-2 uppercase">GRAFIK KEMAMPUAN</h4>
                             {hasGrades ? (
-                              <div className="max-h-[160px] overflow-y-auto">
+                              <div>
                                 <table className="w-full text-[10px]">
                                   <thead>
                                     <tr className="text-left text-zinc-500 font-bold border-b border-zinc-100">
@@ -2921,12 +2921,12 @@ export default function SiswaPage() {
                                 </table>
                               </div>
                             ) : (
-                              <div className="h-[160px] flex items-center justify-center text-[10px] text-zinc-500 font-medium">Belum ada nilai</div>
+                              <div className="flex items-center justify-center text-[10px] text-zinc-500 font-medium py-8">Belum ada nilai</div>
                             )}
                           </div>
 
                           {/* Distribusi Nilai — Ringkasan statis (Pie chart alternative) */}
-                          <div className="bg-white border border-zinc-200 rounded-xl p-4 space-y-2 shadow-xs print-chart-card overflow-hidden">
+                          <div className="bg-white border border-zinc-200 rounded-xl p-4 space-y-2 shadow-xs print-chart-card">
                             <h4 className="text-xs font-bold text-strong-blue tracking-wide border-b border-zinc-200 pb-2 uppercase">DISTRIBUSI NILAI</h4>
                             {hasGrades ? (
                               <div className="space-y-2 pt-1">
