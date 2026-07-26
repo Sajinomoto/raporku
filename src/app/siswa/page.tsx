@@ -2580,7 +2580,7 @@ export default function SiswaPage() {
                               <div className="bg-white border border-zinc-200 rounded-xl p-3 space-y-1 shadow-2xs print-chart-card overflow-hidden">
                                 <h4 className="text-[11px] font-bold text-strong-blue tracking-wide border-b border-zinc-200 pb-1.5 uppercase">NILAI SETIAP MAPEL</h4>
                                 {studentGrades.length > 0 ? (
-                                  <div className="max-w-[480px]">
+                                  <div className="max-w-[520px]">
                                     <ReactApexChart 
                                       options={barChartOptions} 
                                       series={barChartSeries} 
