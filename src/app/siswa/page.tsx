@@ -1169,7 +1169,8 @@ export default function SiswaPage() {
     setPreviewMode("long");
     setIsDownloadingImage(true);
 
-    setTimeout(async () => {
+    // Tunggu 1 frame render agar state "previewMode=long" diproses React terlebih dulu
+    requestAnimationFrame(async () => {
       const el = longReportRef.current;
       if (!el) {
         setIsDownloadingImage(false);
@@ -1183,11 +1184,9 @@ export default function SiswaPage() {
         const dataUrl = await toPng(el, {
           width,
           height,
-          quality: 0.95,
-          pixelRatio: 2,
+          pixelRatio: 1.25,
           backgroundColor: "#ffffff",
-          skipFonts: true,
-          cacheBust: false,
+          cacheBust: true,
           style: {
             display: "block",
             visibility: "visible",
@@ -1209,11 +1208,19 @@ export default function SiswaPage() {
         link.click();
         document.body.removeChild(link);
       } catch (err) {
-        console.error("Error generating long image PNG:", err);
+        // html-to-image kadang melempar Event (native DOM event) bukan Error object
+        // Deteksi dan beri pesan yang lebih jelas
+        if (err instanceof Event) {
+          const imgTarget = err.target as HTMLImageElement | null;
+          console.error("Long image PNG failed — image load error on:", imgTarget?.src || "unknown");
+        } else {
+          console.error("Error generating long image PNG:", err);
+        }
+        alert("Gagal mengunduh gambar. Silakan coba gunakan mode Cetak A4 sebagai alternatif.");
       } finally {
         setIsDownloadingImage(false);
       }
-    }, 450);
+    });
   };
 
   // Filter students
@@ -1470,6 +1477,12 @@ export default function SiswaPage() {
   };
 
   const donutChartSeries = [countA, countB, countC, countD];
+
+  // Precompute uniform chart data for long image mode (hindari union type di JSX)
+  interface ChartItem { label: string; score: number; }
+  const chartItems: ChartItem[] = hasAggregated
+    ? aggregatedGrades.map(g => ({ label: cleanSubjectName(g.nama_mapel), score: g.rataRata }))
+    : studentGrades.map(g => ({ label: cleanSubjectName(g.nama_mapel), score: g.skor }));
 
   return (
     <div className="p-8 flex-1 flex flex-col space-y-6 bg-cool-gray text-zinc-900">
@@ -1848,7 +1861,14 @@ export default function SiswaPage() {
                       className="w-full text-left px-3 py-2 text-xs text-zinc-700 hover:bg-zinc-50 hover:text-strong-blue font-bold flex items-center justify-between transition-colors cursor-pointer group border-t border-zinc-100 disabled:opacity-50"
                     >
                       <div className="flex items-center gap-2">
-                        <Download size={15} className="text-amber-600" />
+                        {isDownloadingImage ? (
+                          <svg className="animate-spin h-4 w-4 text-amber-600" viewBox="0 0 24 24" fill="none">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                          </svg>
+                        ) : (
+                          <Download size={15} className="text-amber-600" />
+                        )}
                         <div>
                           <span className="block">{isDownloadingImage ? "Mengunduh Gambar..." : "Unduh Long Image (PNG)"}</span>
                           <span className="text-[10px] text-zinc-400 font-normal">Langsung unduh PNG tanpa dialog PDF</span>
@@ -2736,9 +2756,10 @@ export default function SiswaPage() {
                       <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
                         <div className="md:col-span-3 flex justify-center">
                           {selectedStudent.foto_url ? (
-                            <NextImage 
-                              src={selectedStudent.foto_url} 
-                              alt={selectedStudent.nama_lengkap} 
+                            <img
+                              src={selectedStudent.foto_url}
+                              alt={selectedStudent.nama_lengkap}
+                              crossOrigin="anonymous"
                               width={128}
                               height={128}
                               className="w-32 h-32 rounded-xl object-cover border-2 border-zinc-200 print-border bg-zinc-50"
@@ -2829,7 +2850,7 @@ export default function SiswaPage() {
                         </div>
                       )}
 
-                      {/* Visualisasi Grafik Row (ApexCharts) */}
+                      {/* Visualisasi Grafik Row (Static HTML untuk long image — hindari ApexCharts complex SVG) */}
                       {loadingDetails ? (
                         <div className="grid grid-cols-1 gap-6 print-grid">
                           {Array(3).fill(0).map((_, idx) => (
@@ -2843,43 +2864,80 @@ export default function SiswaPage() {
                         </div>
                       ) : (
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 print-grid">
+                          {/* Bar Chart — Inline CSS horizontal bars (tanpa ApexCharts) */}
                           <div className="bg-white border border-zinc-200 rounded-xl p-4 space-y-2 shadow-xs print-chart-card overflow-hidden">
                             <h4 className="text-xs font-bold text-strong-blue tracking-wide border-b border-zinc-200 pb-2 uppercase">NILAI SETIAP MAPEL</h4>
-                            {studentGrades.length > 0 ? (
-                              <ReactApexChart 
-                                options={barChartOptions} 
-                                series={barChartSeries} 
-                                type="bar" 
-                                height={190} 
-                              />
+                            {hasGrades ? (
+                              <div className="space-y-1.5 max-h-[190px] overflow-y-auto">
+                                {chartItems.map((item, i) => {
+                                  const barWidth = Math.max(8, Math.min(100, item.score || 0));
+                                  return (
+                                    <div key={i} className="flex items-center gap-2 text-[10px]">
+                                      <span className="w-16 shrink-0 truncate text-zinc-600 font-medium text-right">{item.label}</span>
+                                      <div className="flex-1 bg-zinc-100 rounded-full h-3 overflow-hidden">
+                                        <div
+                                          className="h-full rounded-full bg-strong-blue"
+                                          style={{ width: `${barWidth}%` }}
+                                        />
+                                      </div>
+                                      <span className="w-6 shrink-0 text-right font-bold text-strong-blue">{item.score}</span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
                             ) : (
                               <div className="h-[190px] flex items-center justify-center text-[10px] text-zinc-500 font-medium">Belum ada nilai</div>
                             )}
                           </div>
 
+                          {/* Grafik Kemampuan — Tabel ringkasan (tanpa ApexCharts) */}
                           <div className="bg-white border border-zinc-200 rounded-xl p-4 space-y-2 shadow-xs print-chart-card overflow-hidden">
                             <h4 className="text-xs font-bold text-strong-blue tracking-wide border-b border-zinc-200 pb-2 uppercase">GRAFIK KEMAMPUAN</h4>
-                            {studentGrades.length > 0 ? (
-                              <ReactApexChart 
-                                options={radarChartOptions} 
-                                series={radarChartSeries} 
-                                type="radar" 
-                                height={190} 
-                              />
+                            {hasGrades ? (
+                              <div className="max-h-[190px] overflow-y-auto">
+                                <table className="w-full text-[10px]">
+                                  <thead>
+                                    <tr className="text-left text-zinc-500 font-bold border-b border-zinc-100">
+                                      <th className="py-1">Mata Pelajaran</th>
+                                      <th className="py-1 text-right">Nilai</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody className="divide-y divide-zinc-50">
+                                    {chartItems.map((item, i) => {
+                                      const color = item.score >= 80 ? "text-emerald-600" : item.score >= 70 ? "text-blue-600" : item.score >= 60 ? "text-amber-600" : "text-red-500";
+                                      return (
+                                        <tr key={i}>
+                                          <td className="py-0.5 text-zinc-700">{item.label}</td>
+                                          <td className={`py-0.5 text-right font-bold ${color}`}>{item.score}</td>
+                                        </tr>
+                                      );
+                                    })}
+                                  </tbody>
+                                </table>
+                              </div>
                             ) : (
                               <div className="h-[190px] flex items-center justify-center text-[10px] text-zinc-500 font-medium">Belum ada nilai</div>
                             )}
                           </div>
 
+                          {/* Distribusi Nilai — Ringkasan statis (tanpa ApexCharts) */}
                           <div className="bg-white border border-zinc-200 rounded-xl p-4 space-y-2 shadow-xs print-chart-card overflow-hidden">
                             <h4 className="text-xs font-bold text-strong-blue tracking-wide border-b border-zinc-200 pb-2 uppercase">DISTRIBUSI NILAI</h4>
-                            {studentGrades.length > 0 ? (
-                              <ReactApexChart 
-                                options={donutChartOptions} 
-                                series={donutChartSeries} 
-                                type="donut" 
-                                height={190} 
-                              />
+                            {hasGrades ? (
+                              <div className="space-y-2 pt-1">
+                                {[
+                                  { label: "A (80-100)", count: countA, color: "bg-emerald-500" },
+                                  { label: "B (70-79)", count: countB, color: "bg-blue-500" },
+                                  { label: "C (60-69)", count: countC, color: "bg-amber-500" },
+                                  { label: "D (<60)", count: countD, color: "bg-red-500" },
+                                ].map((item) => (
+                                  <div key={item.label} className="flex items-center gap-2 text-[10px]">
+                                    <span className={`w-2.5 h-2.5 rounded-full ${item.color}`} />
+                                    <span className="flex-1 text-zinc-600 font-medium">{item.label}</span>
+                                    <span className="font-bold text-zinc-800">{item.count} Mapel</span>
+                                  </div>
+                                ))}
+                              </div>
                             ) : (
                               <div className="h-[190px] flex items-center justify-center text-[10px] text-zinc-500 font-medium">Belum ada nilai</div>
                             )}
