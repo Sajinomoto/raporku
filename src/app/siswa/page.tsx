@@ -1829,34 +1829,15 @@ export default function SiswaPage() {
             </div>
             
             <div className="flex flex-wrap items-center gap-3 justify-end">
-              {/* Tombol Action Rapor (Hanya tampil saat tab 'rapor') */}
+              {/* Tombol Cetak Rapor (Hanya tampil saat tab 'rapor') */}
               {activeTab === "rapor" && (
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={handleDownloadPdf}
-                    disabled={isGeneratingPdf}
-                    className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition-all shadow-md shadow-emerald-600/10 cursor-pointer active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {isGeneratingPdf ? (
-                      <>
-                        <Loader2 size={14} className="animate-spin" /> Mengunduh PDF...
-                      </>
-                    ) : (
-                      <>
-                        <Download size={14} /> Download PDF
-                      </>
-                    )}
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={handlePrintA4}
-                    className="flex items-center gap-2 px-4 py-2 bg-strong-blue hover:bg-[#001D6E] text-white rounded-lg text-xs font-bold transition-all shadow-md shadow-strong-blue/10 cursor-pointer active:scale-95"
-                  >
-                    <Printer size={14} /> Cetak
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={handlePrintA4}
+                  className="flex items-center gap-2 px-4 py-2 bg-strong-blue hover:bg-[#001D6E] text-white rounded-lg text-xs font-bold transition-all shadow-md shadow-strong-blue/10 cursor-pointer active:scale-95"
+                >
+                  <Printer size={14} /> Cetak
+                </button>
               )}
 
               <button
