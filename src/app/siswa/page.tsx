@@ -1791,90 +1791,92 @@ export default function SiswaPage() {
             </div>
             
             <div className="flex flex-wrap items-center gap-3 justify-end">
-              {/* Mode Preview Toggle (Hanya tampil saat tab 'rapor') */}
+              {/* Tombol Print & Mode Preview Toggle (Hanya tampil saat tab 'rapor') */}
               {activeTab === "rapor" && (
-                <div className="flex bg-zinc-100 p-1 rounded-lg border border-zinc-200">
-                  <button
-                    type="button"
-                    onClick={() => setPreviewMode("a4")}
-                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold transition-all cursor-pointer ${
-                      previewMode === "a4"
-                        ? "bg-white text-strong-blue shadow-xs"
-                        : "text-zinc-500 hover:text-zinc-800"
-                    }`}
-                    title="Tampilan mode A4 terpisah halaman"
-                  >
-                    <FileText size={13} /> Mode A4
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPreviewMode("long")}
-                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold transition-all cursor-pointer ${
-                      previewMode === "long"
-                        ? "bg-white text-strong-blue shadow-xs"
-                        : "text-zinc-500 hover:text-zinc-800"
-                    }`}
-                    title="Tampilan mode memanjang bersambung"
-                  >
-                    <FileImage size={13} /> Mode Long Image
-                  </button>
-                </div>
-              )}
-
-              {/* Dropdown Print Button */}
-              <div className="relative" ref={printDropdownRef}>
-                <button
-                  type="button"
-                  onClick={() => setIsPrintDropdownOpen((prev) => !prev)}
-                  className="flex items-center gap-2 px-4 py-2 bg-strong-blue hover:bg-[#001D6E] text-white rounded-lg text-xs font-bold transition-all shadow-md shadow-strong-blue/10 cursor-pointer active:scale-95"
-                >
-                  <Printer size={14} /> Print Rapor <ChevronDown size={14} className={`transition-transform duration-200 ${isPrintDropdownOpen ? "rotate-180" : ""}`} />
-                </button>
-
-                {isPrintDropdownOpen && (
-                  <div className="absolute right-0 mt-2 w-56 bg-white border border-zinc-200 rounded-xl shadow-xl z-50 py-1.5 animate-in fade-in zoom-in-95 duration-150">
-                    <div className="px-3 py-1.5 border-b border-zinc-100 text-[10px] font-bold text-zinc-400 uppercase tracking-wider">
-                      Pilih Ukuran & Format Cetak
-                    </div>
+                <>
+                  <div className="flex bg-zinc-100 p-1 rounded-lg border border-zinc-200">
                     <button
                       type="button"
-                      onClick={handlePrintA4}
-                      className="w-full text-left px-3 py-2 text-xs text-zinc-700 hover:bg-zinc-50 hover:text-strong-blue font-bold flex items-center justify-between transition-colors cursor-pointer group"
+                      onClick={() => setPreviewMode("a4")}
+                      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold transition-all cursor-pointer ${
+                        previewMode === "a4"
+                          ? "bg-white text-strong-blue shadow-xs"
+                          : "text-zinc-500 hover:text-zinc-800"
+                      }`}
+                      title="Tampilan mode A4 terpisah halaman"
                     >
-                      <div className="flex items-center gap-2">
-                        <FileText size={15} className="text-strong-blue" />
-                        <div>
-                          <span className="block">Cetak Format A4</span>
-                          <span className="text-[10px] text-zinc-400 font-normal">Multi-halaman dengan header & tanda tangan</span>
-                        </div>
-                      </div>
-                      {previewMode === "a4" && <span className="w-1.5 h-1.5 rounded-full bg-strong-blue" />}
+                      <FileText size={13} /> Mode A4
                     </button>
-
                     <button
                       type="button"
-                      disabled={isDownloadingImage}
-                      onClick={handleDownloadLongImage}
-                      className="w-full text-left px-3 py-2 text-xs text-zinc-700 hover:bg-zinc-50 hover:text-strong-blue font-bold flex items-center justify-between transition-colors cursor-pointer group border-t border-zinc-100 disabled:opacity-50"
+                      onClick={() => setPreviewMode("long")}
+                      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold transition-all cursor-pointer ${
+                        previewMode === "long"
+                          ? "bg-white text-strong-blue shadow-xs"
+                          : "text-zinc-500 hover:text-zinc-800"
+                      }`}
+                      title="Tampilan mode memanjang bersambung"
                     >
-                      <div className="flex items-center gap-2">
-                        {isDownloadingImage ? (
-                          <svg className="animate-spin h-4 w-4 text-amber-600" viewBox="0 0 24 24" fill="none">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                          </svg>
-                        ) : (
-                          <Download size={15} className="text-amber-600" />
-                        )}
-                        <div>
-                          <span className="block">{isDownloadingImage ? "Mengunduh Gambar..." : "Unduh Long Image (PNG)"}</span>
-                          <span className="text-[10px] text-zinc-400 font-normal">Langsung unduh PNG tanpa dialog</span>
-                        </div>
-                      </div>
+                      <FileImage size={13} /> Mode Long Image
                     </button>
                   </div>
-                )}
-              </div>
+
+                  {/* Dropdown Print Button */}
+                  <div className="relative" ref={printDropdownRef}>
+                    <button
+                      type="button"
+                      onClick={() => setIsPrintDropdownOpen((prev) => !prev)}
+                      className="flex items-center gap-2 px-4 py-2 bg-strong-blue hover:bg-[#001D6E] text-white rounded-lg text-xs font-bold transition-all shadow-md shadow-strong-blue/10 cursor-pointer active:scale-95"
+                    >
+                      <Printer size={14} /> Print Rapor <ChevronDown size={14} className={`transition-transform duration-200 ${isPrintDropdownOpen ? "rotate-180" : ""}`} />
+                    </button>
+
+                    {isPrintDropdownOpen && (
+                      <div className="absolute right-0 mt-2 w-56 bg-white border border-zinc-200 rounded-xl shadow-xl z-50 py-1.5 animate-in fade-in zoom-in-95 duration-150">
+                        <div className="px-3 py-1.5 border-b border-zinc-100 text-[10px] font-bold text-zinc-400 uppercase tracking-wider">
+                          Pilih Ukuran & Format Cetak
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handlePrintA4}
+                          className="w-full text-left px-3 py-2 text-xs text-zinc-700 hover:bg-zinc-50 hover:text-strong-blue font-bold flex items-center justify-between transition-colors cursor-pointer group"
+                        >
+                          <div className="flex items-center gap-2">
+                            <FileText size={15} className="text-strong-blue" />
+                            <div>
+                              <span className="block">Cetak Format A4</span>
+                              <span className="text-[10px] text-zinc-400 font-normal">Multi-halaman dengan header & tanda tangan</span>
+                            </div>
+                          </div>
+                          {previewMode === "a4" && <span className="w-1.5 h-1.5 rounded-full bg-strong-blue" />}
+                        </button>
+
+                        <button
+                          type="button"
+                          disabled={isDownloadingImage}
+                          onClick={handleDownloadLongImage}
+                          className="w-full text-left px-3 py-2 text-xs text-zinc-700 hover:bg-zinc-50 hover:text-strong-blue font-bold flex items-center justify-between transition-colors cursor-pointer group border-t border-zinc-100 disabled:opacity-50"
+                        >
+                          <div className="flex items-center gap-2">
+                            {isDownloadingImage ? (
+                              <svg className="animate-spin h-4 w-4 text-amber-600" viewBox="0 0 24 24" fill="none">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                              </svg>
+                            ) : (
+                              <Download size={15} className="text-amber-600" />
+                            )}
+                            <div>
+                              <span className="block">{isDownloadingImage ? "Mengunduh Gambar..." : "Unduh Long Image (PNG)"}</span>
+                              <span className="text-[10px] text-zinc-400 font-normal">Langsung unduh PNG tanpa dialog</span>
+                            </div>
+                          </div>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
 
               <button
                 onClick={() => setSelectedStudent(null)}
@@ -2408,8 +2410,8 @@ export default function SiswaPage() {
                           </div>
 
                           {/* Student Identity Row */}
-                          <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-center">
-                            <div className="md:col-span-3 flex justify-center">
+                          <div className="grid grid-cols-12 gap-4 items-center">
+                            <div className="col-span-3 flex justify-center">
                               {selectedStudent.foto_url ? (
                                 <NextImage 
                                   src={selectedStudent.foto_url} 
@@ -2425,7 +2427,7 @@ export default function SiswaPage() {
                               )}
                             </div>
 
-                            <div className="md:col-span-9 grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-1.5 text-xs">
+                            <div className="col-span-9 grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
                               <div className="flex justify-between border-b border-zinc-200 print-border py-1">
                                 <span className="text-zinc-500 print-text-muted font-medium">Nama Lengkap</span>
                                 <span className="text-zinc-800 print-text font-bold">{selectedStudent.nama_lengkap}</span>
@@ -2457,7 +2459,7 @@ export default function SiswaPage() {
 
                           {/* Rangkuman Metrik Row */}
                           {loadingDetails ? (
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            <div className="grid grid-cols-4 gap-3">
                               {Array(4).fill(0).map((_, idx) => (
                                 <div key={idx} className="bg-zinc-50 border border-zinc-200 rounded-xl p-3 space-y-1.5 animate-pulse">
                                   <div className="h-2.5 bg-zinc-200 rounded w-16 mx-auto" />
@@ -2467,7 +2469,7 @@ export default function SiswaPage() {
                               ))}
                             </div>
                           ) : (
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                            <div className="grid grid-cols-4 gap-3">
                               <div className="bg-zinc-50 border border-zinc-200 print-card rounded-xl p-3 text-center shadow-xs">
                                 <span className="text-[9px] text-zinc-500 print-text-muted font-bold uppercase tracking-wider block">Rata-Rata</span>
                                 <p className="text-xl font-black text-strong-blue print-text mt-0.5">{avgGrade > 0 ? avgGrade.toFixed(2) : "0.00"}</p>
@@ -2795,7 +2797,7 @@ export default function SiswaPage() {
 
                       {/* Rangkuman Metrik Row — Compact */}
                       {loadingDetails ? (
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <div className="grid grid-cols-4 gap-3">
                           {Array(4).fill(0).map((_, idx) => (
                             <div key={idx} className="bg-zinc-50 border border-zinc-200 rounded-xl p-3 space-y-1 animate-pulse">
                               <div className="h-2.5 bg-zinc-200 rounded w-14 mx-auto" />
@@ -2805,7 +2807,7 @@ export default function SiswaPage() {
                           ))}
                         </div>
                       ) : (
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <div className="grid grid-cols-4 gap-3">
                           <div className="bg-zinc-50 border border-zinc-200 print-card rounded-xl p-3 text-center shadow-xs">
                             <span className="text-[9px] text-zinc-500 print-text-muted font-bold uppercase tracking-wider block">Rata-Rata</span>
                             <p className="text-lg font-black text-strong-blue print-text mt-0.5">{avgGrade > 0 ? avgGrade.toFixed(2) : "0.00"}</p>
