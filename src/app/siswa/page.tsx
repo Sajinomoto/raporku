@@ -1292,8 +1292,8 @@ export default function SiswaPage() {
     plotOptions: {
       bar: {
         horizontal: true,
-        barHeight: "55%",
-        borderRadius: 4,
+        barHeight: "50%",
+        borderRadius: 3,
         dataLabels: {
           position: "top",
         }
@@ -1317,7 +1317,8 @@ export default function SiswaPage() {
       categories: hasAggregated 
         ? aggregatedGrades.map(g => cleanSubjectName(g.nama_mapel))
         : studentGrades.map(g => cleanSubjectName(g.nama_mapel)),
-      max: 110,
+      max: 105,
+      tickAmount: 5,
       labels: {
         style: {
           fontWeight: 600,
@@ -1337,7 +1338,7 @@ export default function SiswaPage() {
     },
     grid: {
       borderColor: "#e2e8f0",
-      padding: { top: 0, right: 35, bottom: 0, left: 5 },
+      padding: { top: 0, right: 30, bottom: 0, left: 5 },
       xaxis: { lines: { show: true } }
     }
   };
@@ -1361,7 +1362,7 @@ export default function SiswaPage() {
     },
     plotOptions: {
       radar: {
-        size: 58,
+        size: 45,
         polygons: {
           strokeColors: "#e2e8f0",
           connectorColors: "#e2e8f0",
@@ -1398,7 +1399,7 @@ export default function SiswaPage() {
     },
     grid: {
       borderColor: "#e2e8f0",
-      padding: { top: 5, right: 10, bottom: 20, left: 10 }
+      padding: { top: 5, right: 10, bottom: 15, left: 10 }
     }
   };
 
@@ -1457,12 +1458,12 @@ export default function SiswaPage() {
       width: 2
     },
     grid: {
-      padding: { top: 5, right: 15, bottom: 15, left: 10 }
+      padding: { top: 5, right: 10, bottom: 10, left: 10 }
     },
     plotOptions: {
       pie: {
         donut: {
-          size: "65%",
+          size: "58%",
           labels: {
             show: true,
             name: {
@@ -2446,14 +2447,10 @@ export default function SiswaPage() {
                               )}
                             </div>
 
-                            <div className="col-span-9 grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
-                              <div className="flex justify-between border-b border-zinc-200 print-border py-1">
+                            <div className="col-span-9 grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                              <div className="col-span-2 flex justify-between border-b border-zinc-200 print-border py-1">
                                 <span className="text-zinc-500 print-text-muted font-medium">Nama Lengkap</span>
                                 <span className="text-zinc-800 print-text font-bold">{selectedStudent.nama_lengkap}</span>
-                              </div>
-                              <div className="flex justify-between border-b border-zinc-200 print-border py-1">
-                                <span className="text-zinc-500 print-text-muted font-medium">Semester</span>
-                                <span className="text-zinc-800 print-text font-bold">{selectedStudent.semester}</span>
                               </div>
                               <div className="flex justify-between border-b border-zinc-200 print-border py-1">
                                 <span className="text-zinc-500 print-text-muted font-medium">NIS</span>
@@ -2555,40 +2552,44 @@ export default function SiswaPage() {
                                     options={barChartOptions} 
                                     series={barChartSeries} 
                                     type="bar" 
-                                    height={140} 
+                                    height={130} 
                                   />
                                 ) : (
-                                  <div className="h-[140px] flex items-center justify-center text-[10px] text-zinc-500 font-medium">Belum ada nilai</div>
+                                  <div className="h-[130px] flex items-center justify-center text-[10px] text-zinc-500 font-medium">Belum ada nilai</div>
                                 )}
                               </div>
 
-                              {/* Baris 2: Grafik Kemampuan & Distribusi Nilai (2 Kolom Sejajar) */}
+                              {/* Baris 2: Grafik Kemampuan & Distribusi Nilai (2 Kolom Sejajar - Centered) */}
                               <div className="grid grid-cols-2 gap-3">
-                                <div className="bg-white border border-zinc-200 rounded-xl p-3 space-y-1 shadow-2xs print-chart-card overflow-hidden">
+                                <div className="bg-white border border-zinc-200 rounded-xl p-3 space-y-1 shadow-2xs print-chart-card overflow-hidden flex flex-col justify-between">
                                   <h4 className="text-[11px] font-bold text-strong-blue tracking-wide border-b border-zinc-200 pb-1.5 uppercase">GRAFIK KEMAMPUAN</h4>
                                   {studentGrades.length > 0 ? (
-                                    <ReactApexChart 
-                                      options={radarChartOptions} 
-                                      series={radarChartSeries} 
-                                      type="radar" 
-                                      height={155} 
-                                    />
+                                    <div className="flex-1 flex items-center justify-center pt-1">
+                                      <ReactApexChart 
+                                        options={radarChartOptions} 
+                                        series={radarChartSeries} 
+                                        type="radar" 
+                                        height={145} 
+                                      />
+                                    </div>
                                   ) : (
-                                    <div className="h-[155px] flex items-center justify-center text-[10px] text-zinc-500 font-medium">Belum ada nilai</div>
+                                    <div className="h-[145px] flex items-center justify-center text-[10px] text-zinc-500 font-medium">Belum ada nilai</div>
                                   )}
                                 </div>
 
-                                <div className="bg-white border border-zinc-200 rounded-xl p-3 space-y-1 shadow-2xs print-chart-card overflow-hidden">
+                                <div className="bg-white border border-zinc-200 rounded-xl p-3 space-y-1 shadow-2xs print-chart-card overflow-hidden flex flex-col justify-between">
                                   <h4 className="text-[11px] font-bold text-strong-blue tracking-wide border-b border-zinc-200 pb-1.5 uppercase">DISTRIBUSI NILAI</h4>
                                   {studentGrades.length > 0 ? (
-                                    <ReactApexChart 
-                                      options={donutChartOptions} 
-                                      series={donutChartSeries} 
-                                      type="donut" 
-                                      height={155} 
-                                    />
+                                    <div className="flex-1 flex items-center justify-center pt-1">
+                                      <ReactApexChart 
+                                        options={donutChartOptions} 
+                                        series={donutChartSeries} 
+                                        type="donut" 
+                                        height={145} 
+                                      />
+                                    </div>
                                   ) : (
-                                    <div className="h-[155px] flex items-center justify-center text-[10px] text-zinc-500 font-medium">Belum ada nilai</div>
+                                    <div className="h-[145px] flex items-center justify-center text-[10px] text-zinc-500 font-medium">Belum ada nilai</div>
                                   )}
                                 </div>
                               </div>
@@ -2800,14 +2801,18 @@ export default function SiswaPage() {
                           )}
                         </div>
 
-                        <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-0.5 text-[11px]">
-                          <div className="flex items-baseline gap-2 py-0.5">
-                            <span className="text-zinc-400 print-text-muted shrink-0">Nama</span>
-                            <span className="text-zinc-800 print-text font-semibold break-words">{selectedStudent.nama_lengkap}</span>
+                        <div className="flex-1 grid grid-cols-2 gap-x-4 gap-y-0.5 text-[11px]">
+                          <div className="col-span-2 flex items-baseline gap-2 py-0.5">
+                            <span className="text-zinc-400 print-text-muted shrink-0">Nama Lengkap</span>
+                            <span className="text-zinc-800 print-text font-bold">{selectedStudent.nama_lengkap}</span>
                           </div>
                           <div className="flex items-baseline gap-2 py-0.5">
                             <span className="text-zinc-400 print-text-muted shrink-0">NIS</span>
                             <span className="text-zinc-800 print-text font-semibold">{selectedStudent.nis}</span>
+                          </div>
+                          <div className="flex items-baseline gap-2 py-0.5">
+                            <span className="text-zinc-400 print-text-muted shrink-0">Tahun Ajaran</span>
+                            <span className="text-zinc-800 print-text font-semibold">{selectedStudent.tahun_ajaran}</span>
                           </div>
                           <div className="flex items-baseline gap-2 py-0.5">
                             <span className="text-zinc-400 print-text-muted shrink-0">Kelas</span>
@@ -2816,10 +2821,6 @@ export default function SiswaPage() {
                             </span>
                           </div>
                           <div className="flex items-baseline gap-2 py-0.5">
-                            <span className="text-zinc-400 print-text-muted shrink-0">Semester</span>
-                            <span className="text-zinc-800 print-text font-semibold">{selectedStudent.semester} {selectedStudent.tahun_ajaran}</span>
-                          </div>
-                          <div className="flex items-baseline gap-2 py-0.5 sm:col-span-2">
                             <span className="text-zinc-400 print-text-muted shrink-0">Asal Sekolah</span>
                             <span className="text-zinc-800 print-text font-semibold break-words">{selectedStudent.asal_sekolah}</span>
                           </div>
