@@ -1226,9 +1226,9 @@ export default function SiswaPage() {
       offsetX: 6,
       style: {
         colors: [
-          function ({ value }: { value: number }) {
+          (function ({ value }: { value: number }) {
             return value >= 95 ? "#ffffff" : "#002583";
-          }
+          }) as unknown as string
         ],
         fontSize: "10px",
         fontWeight: 700,
