@@ -189,11 +189,18 @@ export default function SiswaPage() {
   const [confirmDeleteStudent, setConfirmDeleteStudent] = useState<Siswa | null>(null);
   const [toast, setToast] = useState<{ text: string; type: "success" | "error" } | null>(null);
 
-  const showToast = (text: string, type: "success" | "error" = "success") => {
+  const showToast = (text: string, type: "success" | "error" = "success", duration: number = 3000) => {
     setToast({ text, type });
     setTimeout(() => {
       setToast(null);
-    }, 3000);
+    }, duration);
+  };
+
+  const handlePrintA4 = () => {
+    document.body.classList.add("print-a4-mode");
+    setTimeout(() => {
+      window.print();
+    }, 150);
   };
 
   // Ref for print area
@@ -1131,13 +1138,6 @@ export default function SiswaPage() {
     }
   };
 
-  const handlePrintA4 = () => {
-    document.body.classList.add("print-a4-mode");
-    setTimeout(() => {
-      window.print();
-    }, 150);
-  };
-
 
 
   // Filter students
@@ -1309,8 +1309,8 @@ export default function SiswaPage() {
     },
     xaxis: {
       categories: hasAggregated
-        ? aggregatedGrades.map(g => [cleanSubjectName(g.nama_mapel), `(${g.rataRata})`])
-        : studentGrades.map(g => [cleanSubjectName(g.nama_mapel), `(${g.skor})`]),
+        ? aggregatedGrades.map(g => [cleanSubjectName(g.nama_mapel), `(${g.rataRata} - ${getGradePredicate(g.rataRata).letter})`])
+        : studentGrades.map(g => [cleanSubjectName(g.nama_mapel), `(${g.skor} - ${getGradePredicate(g.skor).letter})`]),
       labels: {
         style: {
           fontWeight: 700,
@@ -1368,11 +1368,11 @@ export default function SiswaPage() {
           value: {
             offsetY: 2,
             color: "#002583",
-            fontSize: "13px",
+            fontSize: "12px",
             fontWeight: 800,
             show: true,
             formatter: function (val: number) {
-              return String(val);
+              return `${val} - ${getGradePredicate(val).letter}`;
             }
           }
         }
@@ -1412,7 +1412,12 @@ export default function SiswaPage() {
     dataLabels: {
       enabled: false
     },
-    labels: ["A (80-100)", "B (70-79)", "C (60-69)", "D (<60)"],
+    labels: [
+      "A - Sangat Baik (80-100)",
+      "B - Baik (70-79)",
+      "C - Cukup (60-69)",
+      "D - Kurang (<60)"
+    ],
     colors: ["#10b981", "#3b82f6", "#f59e0b", "#ef4444"],
     legend: {
       position: "bottom" as const,
@@ -1790,7 +1795,7 @@ export default function SiswaPage() {
                   onClick={handlePrintA4}
                   className="flex items-center gap-2 px-4 py-2 bg-strong-blue hover:bg-[#001D6E] text-white rounded-lg text-xs font-bold transition-all shadow-md shadow-strong-blue/10 cursor-pointer active:scale-95"
                 >
-                  <Printer size={14} /> Print Rapor
+                  <Printer size={14} /> Cetak / Simpan PDF
                 </button>
               )}
 
@@ -2487,49 +2492,60 @@ export default function SiswaPage() {
                                 )}
                               </div>
 
-                              {/* Baris 2: Grafik Kemampuan & Distribusi Nilai (2 Kolom Sejajar) */}
-                              <div className="grid grid-cols-2 gap-3">
-                                <div className="bg-white border border-zinc-200 rounded-xl p-3 space-y-1 shadow-2xs print-chart-card overflow-hidden flex flex-col justify-between">
-                                  <h4 className="text-[11px] font-bold text-strong-blue tracking-wide border-b border-zinc-200 pb-1.5 uppercase">GRAFIK KEMAMPUAN</h4>
-                                  {studentGrades.length > 0 ? (
-                                    <div className="flex-1 flex items-center justify-center pt-1">
-                                      {subjectCount >= 3 ? (
-                                        <ReactApexChart 
-                                          options={radarChartOptions} 
-                                          series={radarChartSeries} 
-                                          type="radar" 
-                                          height={145} 
-                                        />
+                              {/* Baris 2: Grafik Kemampuan & Distribusi Nilai */}
+                              {(() => {
+                                const currentJenjang = (classes.find(c => c.id === selectedStudent.kelas_id)?.jenjang || "SD").toUpperCase();
+                                const isSmpOrSd = currentJenjang === "SD" || currentJenjang === "SMP";
+                                const isSingleSubject = subjectCount === 1;
+                                const hideDistribusiNilai = isSmpOrSd || isSingleSubject;
+
+                                return (
+                                  <div className={`grid ${hideDistribusiNilai ? "grid-cols-1" : "grid-cols-2"} gap-3`}>
+                                    <div className="bg-white border border-zinc-200 rounded-xl p-3 space-y-1 shadow-2xs print-chart-card overflow-hidden flex flex-col justify-between">
+                                      <h4 className="text-[11px] font-bold text-strong-blue tracking-wide border-b border-zinc-200 pb-1.5 uppercase">GRAFIK KEMAMPUAN</h4>
+                                      {studentGrades.length > 0 ? (
+                                        <div className="flex-1 flex items-center justify-center pt-1">
+                                          {subjectCount >= 3 ? (
+                                            <ReactApexChart 
+                                              options={radarChartOptions} 
+                                              series={radarChartSeries} 
+                                              type="radar" 
+                                              height={145} 
+                                            />
+                                          ) : (
+                                            <ReactApexChart 
+                                              options={radialChartOptions} 
+                                              series={radialChartSeries} 
+                                              type="radialBar" 
+                                              height={150} 
+                                            />
+                                          )}
+                                        </div>
                                       ) : (
-                                        <ReactApexChart 
-                                          options={radialChartOptions} 
-                                          series={radialChartSeries} 
-                                          type="radialBar" 
-                                          height={150} 
-                                        />
+                                        <div className="h-[145px] flex items-center justify-center text-[10px] text-zinc-500 font-medium">Belum ada nilai</div>
                                       )}
                                     </div>
-                                  ) : (
-                                    <div className="h-[145px] flex items-center justify-center text-[10px] text-zinc-500 font-medium">Belum ada nilai</div>
-                                  )}
-                                </div>
 
-                                <div className="bg-white border border-zinc-200 rounded-xl p-3 space-y-1 shadow-2xs print-chart-card overflow-hidden flex flex-col justify-between">
-                                  <h4 className="text-[11px] font-bold text-strong-blue tracking-wide border-b border-zinc-200 pb-1.5 uppercase">DISTRIBUSI NILAI</h4>
-                                  {studentGrades.length > 0 ? (
-                                    <div className="flex-1 flex items-center justify-center pt-1">
-                                      <ReactApexChart 
-                                        options={donutChartOptions} 
-                                        series={donutChartSeries} 
-                                        type="donut" 
-                                        height={145} 
-                                      />
-                                    </div>
-                                  ) : (
-                                    <div className="h-[145px] flex items-center justify-center text-[10px] text-zinc-500 font-medium">Belum ada nilai</div>
-                                  )}
-                                </div>
-                              </div>
+                                    {!hideDistribusiNilai && (
+                                      <div className="bg-white border border-zinc-200 rounded-xl p-3 space-y-1 shadow-2xs print-chart-card overflow-hidden flex flex-col justify-between">
+                                        <h4 className="text-[11px] font-bold text-strong-blue tracking-wide border-b border-zinc-200 pb-1.5 uppercase">DISTRIBUSI NILAI</h4>
+                                        {studentGrades.length > 0 ? (
+                                          <div className="flex-1 flex items-center justify-center pt-1">
+                                            <ReactApexChart 
+                                              options={donutChartOptions} 
+                                              series={donutChartSeries} 
+                                              type="donut" 
+                                              height={145} 
+                                            />
+                                          </div>
+                                        ) : (
+                                          <div className="h-[145px] flex items-center justify-center text-[10px] text-zinc-500 font-medium">Belum ada nilai</div>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })()}
 
                               {/* Baris 3: Data Kehadiran (Dipindahkan ke Halaman 1, di bawah Grafik Kemampuan & Distribusi Nilai) */}
                               <div className="bg-white border border-zinc-200 rounded-xl p-3 space-y-1.5 shadow-2xs print-chart-card">
@@ -2617,7 +2633,6 @@ export default function SiswaPage() {
                                     <th className="py-1.5 text-left">Mata Pelajaran</th>
                                     <th className="py-1.5 text-left">Materi</th>
                                     <th className="py-1.5 text-center w-24">Tentor</th>
-                                    <th className="py-1.5 text-center w-28">Waktu</th>
                                     <th className="py-1.5 text-right w-16">Skor</th>
                                   </tr>
                                 </thead>
@@ -2629,17 +2644,12 @@ export default function SiswaPage() {
                                       </td>
                                       <td className="py-1.5 italic text-zinc-500 line-clamp-1">{g.materi || "-"}</td>
                                       <td className="py-1.5 text-center text-zinc-500 font-mono text-[11px]">{g.kode_tentor || "-"}</td>
-                                      <td className="py-1.5 text-center text-zinc-500 font-mono text-[10px]">
-                                        {g.tanggal_pembelajaran
-                                          ? `${new Date(g.tanggal_pembelajaran).toLocaleDateString("id-ID", { day: '2-digit', month: 'short', year: 'numeric' })}${g.jam ? `, ${g.jam}` : ""}`
-                                          : "-"}
-                                      </td>
                                       <td className="py-1.5 text-right font-bold text-strong-blue print-text">{g.skor}</td>
                                     </tr>
                                   ))}
                                   {studentGrades.length === 0 && (
                                     <tr>
-                                      <td colSpan={5} className="py-3 text-center text-zinc-500 italic">Belum ada nilai terinput.</td>
+                                      <td colSpan={4} className="py-3 text-center text-zinc-500 italic">Belum ada nilai terinput.</td>
                                     </tr>
                                   )}
                                 </tbody>
@@ -2656,13 +2666,10 @@ export default function SiswaPage() {
                             </div>
                           ) : (
                             <div className="bg-zinc-50 border border-zinc-200 print-card rounded-xl p-4 space-y-1.5">
-                              <h4 className="text-[11px] font-bold text-strong-blue print-text tracking-wide border-b border-zinc-200 print-border pb-1 uppercase">CATATAN WALI KELAS</h4>
+                              <h4 className="text-[11px] font-bold text-strong-blue print-text tracking-wide border-b border-zinc-200 print-border pb-1 uppercase">CATATAN</h4>
                               <p className="text-xs text-zinc-700 print-text leading-relaxed italic">
                                 "{studentNote?.catatan}"
                               </p>
-                              <div className="text-right text-[9px] text-zinc-500 print-text-muted font-bold mt-1">
-                                Nama Guru: {studentNote?.nama_guru}
-                              </div>
                             </div>
                           )}
                         </div>
@@ -2675,18 +2682,14 @@ export default function SiswaPage() {
                                 <p className="text-zinc-500 print-text-muted">Dibuat Oleh,</p>
                                 <p className="text-zinc-800 print-text font-bold mt-0.5">Staf Akademik</p>
                               </div>
-                              <p className="text-zinc-600 print-text font-semibold border-b border-dashed border-zinc-400 print-border w-44 mx-auto pb-0.5">
-                                {studentNote?.nama_guru || "Prof. Dr. Dora The Explorer"}
-                              </p>
+                              <p className="border-b border-dashed border-zinc-400 print-border w-44 mx-auto pb-0.5 h-5"></p>
                             </div>
                             <div className="space-y-10">
                               <div>
                                 <p className="text-zinc-500 print-text-muted">Mengetahui,</p>
                                 <p className="text-zinc-800 print-text font-bold mt-0.5">Pimpinan Cabang</p>
                               </div>
-                              <p className="text-zinc-600 print-text font-semibold border-b border-dashed border-zinc-400 print-border w-44 mx-auto pb-0.5">
-                                Dr. Boots M.Pd
-                              </p>
+                              <p className="border-b border-dashed border-zinc-400 print-border w-44 mx-auto pb-0.5 h-5"></p>
                             </div>
                           </div>
 
