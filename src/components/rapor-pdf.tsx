@@ -1,9 +1,10 @@
 "use client";
 
 import React from "react";
-import { Document, Page, View, Text, Image, StyleSheet } from "@react-pdf/renderer";
+import type { StyleSheet } from "@react-pdf/renderer";
+import type { ComponentType } from "react";
 
-// ── Types ──────────────────────────────────────────
+// ── Types ──
 export interface RaporPDFStudent {
   id: string;
   nis: string;
@@ -60,7 +61,7 @@ export interface RaporPDFProps {
   countD: number;
 }
 
-// ── Colors ──────────────────────────────────────────
+// ── Colors ──
 const STRONG_BLUE = "#002583";
 const MUSTARD = "#FFB800";
 const ZINC_800 = "#27272a";
@@ -71,479 +72,11 @@ const ZINC_400 = "#a1a1aa";
 const ZINC_200 = "#e4e4e7";
 const ZINC_100 = "#f4f4f5";
 const ZINC_50 = "#fafafa";
-const WHITE = "#ffffff";
 const EMERALD_600 = "#059669";
 const PURPLE_600 = "#9333ea";
 const RED_500 = "#ef4444";
 const AMBER_500 = "#f59e0b";
 
-// ── Styles ──────────────────────────────────────────
-const styles = StyleSheet.create({
-  page: {
-    padding: 36,
-    fontFamily: "Helvetica",
-    fontSize: 10,
-    color: ZINC_800,
-    lineHeight: 1.4,
-  },
-  // ── Header ──
-  headerRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    borderBottomWidth: 2,
-    borderBottomColor: ZINC_200,
-    paddingBottom: 12,
-    marginBottom: 14,
-  },
-  headerLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  logoBox: {
-    width: 36,
-    height: 36,
-    borderRadius: 8,
-    backgroundColor: MUSTARD,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  logoText: {
-    fontSize: 16,
-    fontWeight: "black",
-    color: STRONG_BLUE,
-  },
-  headerTitle: {
-    fontSize: 16,
-    fontWeight: "black",
-    color: STRONG_BLUE,
-    letterSpacing: 0.5,
-  },
-  headerSub: {
-    fontSize: 8,
-    color: ZINC_500,
-    fontWeight: "bold",
-  },
-  headerRightLabel: {
-    fontSize: 8,
-    color: ZINC_500,
-    fontWeight: "bold",
-    textTransform: "uppercase" as const,
-    textAlign: "right" as const,
-  },
-  headerRightValue: {
-    fontSize: 10,
-    fontWeight: "black",
-    color: STRONG_BLUE,
-    textAlign: "right" as const,
-  },
-
-  // ── Identity ──
-  identityRow: {
-    flexDirection: "row",
-    gap: 12,
-    marginBottom: 12,
-  },
-  identityPhoto: {
-    width: 68,
-    height: 68,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: ZINC_200,
-    backgroundColor: ZINC_50,
-  },
-  identityPhotoPlaceholder: {
-    width: 68,
-    height: 68,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: ZINC_200,
-    backgroundColor: `${STRONG_BLUE}10`,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  identityPhotoPlaceholderText: {
-    fontSize: 18,
-    color: STRONG_BLUE,
-    fontWeight: "bold",
-  },
-  identityInfo: {
-    flex: 1,
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 2,
-  },
-  identityItem: {
-    width: "48%",
-    flexDirection: "row",
-    gap: 4,
-    paddingVertical: 1,
-    alignItems: "baseline",
-  },
-  identityItemFull: {
-    width: "100%",
-    flexDirection: "row",
-    gap: 4,
-    paddingVertical: 1,
-    alignItems: "baseline",
-  },
-  identityLabel: {
-    fontSize: 9,
-    color: ZINC_400,
-    fontWeight: "medium",
-  },
-  identityValue: {
-    fontSize: 9,
-    color: ZINC_800,
-    fontWeight: "semibold",
-  },
-
-  // ── Metrics ──
-  metricsRow: {
-    flexDirection: "row",
-    gap: 8,
-    marginBottom: 12,
-  },
-  metricCard: {
-    flex: 1,
-    backgroundColor: ZINC_50,
-    borderWidth: 1,
-    borderColor: ZINC_200,
-    borderRadius: 8,
-    padding: 8,
-    alignItems: "center",
-  },
-  metricLabel: {
-    fontSize: 7,
-    color: ZINC_500,
-    fontWeight: "bold",
-    textTransform: "uppercase" as const,
-    letterSpacing: 0.5,
-  },
-  metricValue: {
-    fontSize: 14,
-    fontWeight: "black",
-    marginTop: 2,
-  },
-  metricBadge: {
-    fontSize: 6,
-    fontWeight: "bold",
-    paddingHorizontal: 4,
-    paddingVertical: 1.5,
-    borderRadius: 3,
-    marginTop: 3,
-  },
-  metricBadgeGreen: {
-    backgroundColor: `${EMERALD_600}15`,
-    color: EMERALD_600,
-  },
-  metricBadgeMustard: {
-    backgroundColor: `${MUSTARD}25`,
-    color: "#A67800",
-  },
-  metricBadgeZinc: {
-    backgroundColor: ZINC_200,
-    color: ZINC_600,
-  },
-  metricBadgePurple: {
-    backgroundColor: `${PURPLE_600}15`,
-    color: PURPLE_600,
-  },
-
-  // ── Section Title ──
-  sectionTitle: {
-    fontSize: 9,
-    fontWeight: "bold",
-    color: STRONG_BLUE,
-    textTransform: "uppercase" as const,
-    borderBottomWidth: 1,
-    borderBottomColor: ZINC_200,
-    paddingBottom: 4,
-    marginBottom: 6,
-  },
-
-  // ── Bar Chart ──
-  barChartCard: {
-    borderWidth: 1,
-    borderColor: ZINC_200,
-    borderRadius: 8,
-    padding: 10,
-    marginBottom: 10,
-  },
-  barRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginBottom: 3,
-  },
-  barLabel: {
-    width: 72,
-    fontSize: 8,
-    color: ZINC_600,
-    fontWeight: "medium",
-    textAlign: "right" as const,
-  },
-  barTrack: {
-    flex: 1,
-    height: 10,
-    backgroundColor: ZINC_100,
-    borderRadius: 5,
-  },
-  barFill: {
-    height: 10,
-    backgroundColor: STRONG_BLUE,
-    borderRadius: 5,
-  },
-  barScore: {
-    width: 22,
-    fontSize: 8,
-    fontWeight: "bold",
-    color: STRONG_BLUE,
-    textAlign: "right" as const,
-  },
-
-  // ── 2-Column Charts ──
-  chart2Col: {
-    flexDirection: "row",
-    gap: 10,
-    marginBottom: 10,
-  },
-  chartCol: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: ZINC_200,
-    borderRadius: 8,
-    padding: 10,
-  },
-  tableHeader: {
-    flexDirection: "row",
-    borderBottomWidth: 1,
-    borderBottomColor: ZINC_200,
-    paddingBottom: 4,
-    marginBottom: 2,
-  },
-  tableHeaderCell: {
-    flex: 1,
-    fontSize: 7.5,
-    fontWeight: "bold",
-    color: ZINC_500,
-  },
-  tableHeaderCellRight: {
-    width: 30,
-    fontSize: 7.5,
-    fontWeight: "bold",
-    color: ZINC_500,
-    textAlign: "right" as const,
-  },
-  tableRow: {
-    flexDirection: "row",
-    paddingVertical: 2,
-    borderBottomWidth: 0.5,
-    borderBottomColor: ZINC_100,
-  },
-  tableRowCell: {
-    flex: 1,
-    fontSize: 8,
-    color: ZINC_700,
-  },
-  tableRowCellScore: {
-    width: 30,
-    fontSize: 8,
-    fontWeight: "bold",
-    textAlign: "right" as const,
-  },
-  distribItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginBottom: 4,
-  },
-  distribDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  distribLabel: {
-    flex: 1,
-    fontSize: 8,
-    color: ZINC_600,
-    fontWeight: "medium",
-  },
-  distribCount: {
-    fontSize: 8,
-    fontWeight: "bold",
-    color: ZINC_800,
-  },
-
-  // ── Detail Section ──
-  detailSection: {
-    flexDirection: "row",
-    gap: 12,
-    marginBottom: 10,
-  },
-  detailCol: {
-    flex: 1,
-  },
-  detailCol2: {
-    flex: 2,
-  },
-  tableFull: {
-    width: "100%",
-  },
-  thRow: {
-    flexDirection: "row",
-    borderBottomWidth: 1,
-    borderBottomColor: ZINC_200,
-    paddingVertical: 4,
-  },
-  thCellSm: {
-    fontSize: 8,
-    fontWeight: "bold",
-    color: ZINC_500,
-    textAlign: "left" as const,
-  },
-  thCellRight: {
-    fontSize: 8,
-    fontWeight: "bold",
-    color: ZINC_500,
-    textAlign: "right" as const,
-  },
-  tdRow: {
-    flexDirection: "row",
-    borderBottomWidth: 0.5,
-    borderBottomColor: ZINC_200,
-    paddingVertical: 3,
-  },
-  tdCellSm: {
-    fontSize: 8,
-    color: ZINC_700,
-    fontWeight: "medium",
-  },
-  tdCellRight: {
-    fontSize: 8,
-    fontWeight: "bold",
-    textAlign: "right" as const,
-  },
-  tdCellMapel: {
-    fontSize: 8,
-    color: ZINC_800,
-    fontWeight: "medium",
-    flex: 1,
-  },
-  tdCellKategori: {
-    fontSize: 7,
-    color: ZINC_400,
-    fontWeight: "medium",
-  },
-  tdCellCenter: {
-    fontSize: 7.5,
-    color: ZINC_500,
-    textAlign: "center" as const,
-    width: 36,
-  },
-  tdCellWaktu: {
-    fontSize: 7,
-    color: ZINC_500,
-    textAlign: "center" as const,
-    width: 50,
-  },
-  tdSkor: {
-    fontSize: 8,
-    fontWeight: "bold",
-    color: STRONG_BLUE,
-    textAlign: "right" as const,
-    width: 22,
-  },
-
-  // ── Notes ──
-  noteCard: {
-    backgroundColor: ZINC_50,
-    borderWidth: 1,
-    borderColor: ZINC_200,
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 12,
-  },
-  noteTitle: {
-    fontSize: 9,
-    fontWeight: "bold",
-    color: STRONG_BLUE,
-    textTransform: "uppercase" as const,
-    borderBottomWidth: 1,
-    borderBottomColor: ZINC_200,
-    paddingBottom: 4,
-    marginBottom: 6,
-  },
-  noteText: {
-    fontSize: 9,
-    color: ZINC_700,
-    fontStyle: "italic",
-    lineHeight: 1.6,
-  },
-  noteAuthor: {
-    fontSize: 8,
-    color: ZINC_500,
-    fontWeight: "bold",
-    textAlign: "right" as const,
-    marginTop: 6,
-  },
-
-  // ── Signatures ──
-  signaturesRow: {
-    flexDirection: "row",
-    gap: 20,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: ZINC_200,
-    marginBottom: 0,
-  },
-  signatureCol: {
-    flex: 1,
-    alignItems: "center",
-    gap: 24,
-  },
-  signatureLabel: {
-    fontSize: 9,
-    color: ZINC_500,
-    textAlign: "center" as const,
-  },
-  signatureRole: {
-    fontSize: 9,
-    color: ZINC_800,
-    fontWeight: "bold",
-    textAlign: "center" as const,
-    marginTop: 2,
-  },
-  signatureLine: {
-    width: "70%",
-    borderBottomWidth: 1,
-    borderBottomColor: ZINC_400,
-    borderStyle: "dashed",
-    paddingBottom: 3,
-    alignSelf: "center" as const,
-  },
-  signatureName: {
-    fontSize: 9,
-    color: ZINC_600,
-    fontWeight: "semibold",
-    textAlign: "center" as const,
-  },
-
-  // ── Empty State ──
-  emptyState: {
-    padding: 20,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  emptyText: {
-    fontSize: 8,
-    color: ZINC_500,
-    fontStyle: "italic",
-  },
-});
-
-// ── Helpers ──────────────────────────────────────────
 const getScoreColor = (score: number): string => {
   if (score >= 80) return EMERALD_600;
   if (score >= 70) return "#2563eb";
@@ -566,341 +99,697 @@ const formatDate = (dateStr: string | null, jam: string | null): string => {
   }
 };
 
-// ── Sub-components ──────────────────────────────────
+// ── Factory: terima @react-pdf/renderer modules sebagai parameter ──
+// (menghindari static import yang gagal di Vercel build)
+export function createRaporPDF(modules: {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  Document: ComponentType<any>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  Page: ComponentType<any>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  View: ComponentType<any>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  Text: ComponentType<any>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  Image: ComponentType<any>;
+  StyleSheet: typeof StyleSheet;
+}, props: RaporPDFProps) {
+  const { Document, Page, View, Text, Image, StyleSheet } = modules;
+  const { student, grades, attendance, note, classes, avgGrade, attendancePercent, overallPredicate, chartItems, countA, countB, countC, countD } = props;
 
-const EmptyState: React.FC<{ text: string }> = ({ text }) => (
-  <View style={styles.emptyState}>
-    <Text style={styles.emptyText}>{text}</Text>
-  </View>
-);
+  const styles = StyleSheet.create({
+    page: {
+      padding: 36,
+      fontFamily: "Helvetica",
+      fontSize: 10,
+      color: ZINC_800,
+      lineHeight: 1.4,
+    },
+    headerRow: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      borderBottomWidth: 2,
+      borderBottomColor: ZINC_200,
+      paddingBottom: 12,
+      marginBottom: 14,
+    },
+    headerLeft: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+    },
+    logoBox: {
+      width: 36,
+      height: 36,
+      borderRadius: 8,
+      backgroundColor: MUSTARD,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    logoText: {
+      fontSize: 16,
+      fontWeight: "black",
+      color: STRONG_BLUE,
+    },
+    headerTitle: {
+      fontSize: 16,
+      fontWeight: "black",
+      color: STRONG_BLUE,
+      letterSpacing: 0.5,
+    },
+    headerSub: {
+      fontSize: 8,
+      color: ZINC_500,
+      fontWeight: "bold",
+    },
+    headerRightLabel: {
+      fontSize: 8,
+      color: ZINC_500,
+      fontWeight: "bold",
+      textTransform: "uppercase" as const,
+      textAlign: "right" as const,
+    },
+    headerRightValue: {
+      fontSize: 10,
+      fontWeight: "black",
+      color: STRONG_BLUE,
+      textAlign: "right" as const,
+    },
+    identityRow: {
+      flexDirection: "row",
+      gap: 12,
+      marginBottom: 12,
+    },
+    identityPhoto: {
+      width: 68,
+      height: 68,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: ZINC_200,
+      backgroundColor: ZINC_50,
+    },
+    identityPhotoPlaceholder: {
+      width: 68,
+      height: 68,
+      borderRadius: 8,
+      borderWidth: 1,
+      borderColor: ZINC_200,
+      backgroundColor: `${STRONG_BLUE}10`,
+      justifyContent: "center",
+      alignItems: "center",
+    },
+    identityPhotoPlaceholderText: {
+      fontSize: 18,
+      color: STRONG_BLUE,
+      fontWeight: "bold",
+    },
+    identityInfo: {
+      flex: 1,
+      flexDirection: "row",
+      flexWrap: "wrap",
+      gap: 2,
+    },
+    identityItem: {
+      width: "48%",
+      flexDirection: "row",
+      gap: 4,
+      paddingVertical: 1,
+      alignItems: "baseline",
+    },
+    identityItemFull: {
+      width: "100%",
+      flexDirection: "row",
+      gap: 4,
+      paddingVertical: 1,
+      alignItems: "baseline",
+    },
+    identityLabel: {
+      fontSize: 9,
+      color: ZINC_400,
+      fontWeight: "medium",
+    },
+    identityValue: {
+      fontSize: 9,
+      color: ZINC_800,
+      fontWeight: "semibold",
+    },
+    metricsRow: {
+      flexDirection: "row",
+      gap: 8,
+      marginBottom: 12,
+    },
+    metricCard: {
+      flex: 1,
+      backgroundColor: ZINC_50,
+      borderWidth: 1,
+      borderColor: ZINC_200,
+      borderRadius: 8,
+      padding: 8,
+      alignItems: "center",
+    },
+    metricLabel: {
+      fontSize: 7,
+      color: ZINC_500,
+      fontWeight: "bold",
+      textTransform: "uppercase" as const,
+      letterSpacing: 0.5,
+    },
+    metricValue: {
+      fontSize: 14,
+      fontWeight: "black",
+      marginTop: 2,
+    },
+    metricBadge: {
+      fontSize: 6,
+      fontWeight: "bold",
+      paddingHorizontal: 4,
+      paddingVertical: 1.5,
+      borderRadius: 3,
+      marginTop: 3,
+    },
+    metricBadgeGreen: {
+      backgroundColor: `${EMERALD_600}15`,
+      color: EMERALD_600,
+    },
+    metricBadgeMustard: {
+      backgroundColor: `${MUSTARD}25`,
+      color: "#A67800",
+    },
+    metricBadgeZinc: {
+      backgroundColor: ZINC_200,
+      color: ZINC_600,
+    },
+    metricBadgePurple: {
+      backgroundColor: `${PURPLE_600}15`,
+      color: PURPLE_600,
+    },
+    sectionTitle: {
+      fontSize: 9,
+      fontWeight: "bold",
+      color: STRONG_BLUE,
+      textTransform: "uppercase" as const,
+      borderBottomWidth: 1,
+      borderBottomColor: ZINC_200,
+      paddingBottom: 4,
+      marginBottom: 6,
+    },
+    barChartCard: {
+      borderWidth: 1,
+      borderColor: ZINC_200,
+      borderRadius: 8,
+      padding: 10,
+      marginBottom: 10,
+    },
+    barRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      marginBottom: 3,
+    },
+    barLabel: {
+      width: 72,
+      fontSize: 8,
+      color: ZINC_600,
+      fontWeight: "medium",
+      textAlign: "right" as const,
+    },
+    barTrack: {
+      flex: 1,
+      height: 10,
+      backgroundColor: ZINC_100,
+      borderRadius: 5,
+    },
+    barFill: {
+      height: 10,
+      backgroundColor: STRONG_BLUE,
+      borderRadius: 5,
+    },
+    barScore: {
+      width: 22,
+      fontSize: 8,
+      fontWeight: "bold",
+      color: STRONG_BLUE,
+      textAlign: "right" as const,
+    },
+    chart2Col: {
+      flexDirection: "row",
+      gap: 10,
+      marginBottom: 10,
+    },
+    chartCol: {
+      flex: 1,
+      borderWidth: 1,
+      borderColor: ZINC_200,
+      borderRadius: 8,
+      padding: 10,
+    },
+    tableHeader: {
+      flexDirection: "row",
+      borderBottomWidth: 1,
+      borderBottomColor: ZINC_200,
+      paddingBottom: 4,
+      marginBottom: 2,
+    },
+    tableHeaderCell: {
+      flex: 1,
+      fontSize: 7.5,
+      fontWeight: "bold",
+      color: ZINC_500,
+    },
+    tableHeaderCellRight: {
+      width: 30,
+      fontSize: 7.5,
+      fontWeight: "bold",
+      color: ZINC_500,
+      textAlign: "right" as const,
+    },
+    tableRow: {
+      flexDirection: "row",
+      paddingVertical: 2,
+      borderBottomWidth: 0.5,
+      borderBottomColor: ZINC_100,
+    },
+    tableRowCell: {
+      flex: 1,
+      fontSize: 8,
+      color: ZINC_700,
+    },
+    tableRowCellScore: {
+      width: 30,
+      fontSize: 8,
+      fontWeight: "bold",
+      textAlign: "right" as const,
+    },
+    distribItem: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      marginBottom: 4,
+    },
+    distribDot: {
+      width: 8,
+      height: 8,
+      borderRadius: 4,
+    },
+    distribLabel: {
+      flex: 1,
+      fontSize: 8,
+      color: ZINC_600,
+      fontWeight: "medium",
+    },
+    distribCount: {
+      fontSize: 8,
+      fontWeight: "bold",
+      color: ZINC_800,
+    },
+    detailSection: {
+      flexDirection: "row",
+      gap: 12,
+      marginBottom: 10,
+    },
+    detailCol: {
+      flex: 1,
+    },
+    detailCol2: {
+      flex: 2,
+    },
+    tableFull: {
+      width: "100%",
+    },
+    thRow: {
+      flexDirection: "row",
+      borderBottomWidth: 1,
+      borderBottomColor: ZINC_200,
+      paddingVertical: 4,
+    },
+    thCellSm: {
+      fontSize: 8,
+      fontWeight: "bold",
+      color: ZINC_500,
+      textAlign: "left" as const,
+    },
+    thCellRight: {
+      fontSize: 8,
+      fontWeight: "bold",
+      color: ZINC_500,
+      textAlign: "right" as const,
+    },
+    tdRow: {
+      flexDirection: "row",
+      borderBottomWidth: 0.5,
+      borderBottomColor: ZINC_200,
+      paddingVertical: 3,
+    },
+    tdCellSm: {
+      fontSize: 8,
+      color: ZINC_700,
+      fontWeight: "medium",
+    },
+    tdCellRight: {
+      fontSize: 8,
+      fontWeight: "bold",
+      textAlign: "right" as const,
+    },
+    tdCellMapel: {
+      fontSize: 8,
+      color: ZINC_800,
+      fontWeight: "medium",
+      flex: 1,
+    },
+    tdCellKategori: {
+      fontSize: 7,
+      color: ZINC_400,
+      fontWeight: "medium",
+    },
+    tdCellCenter: {
+      fontSize: 7.5,
+      color: ZINC_500,
+      textAlign: "center" as const,
+      width: 36,
+    },
+    tdCellWaktu: {
+      fontSize: 7,
+      color: ZINC_500,
+      textAlign: "center" as const,
+      width: 50,
+    },
+    tdSkor: {
+      fontSize: 8,
+      fontWeight: "bold",
+      color: STRONG_BLUE,
+      textAlign: "right" as const,
+      width: 22,
+    },
+    noteCard: {
+      backgroundColor: ZINC_50,
+      borderWidth: 1,
+      borderColor: ZINC_200,
+      borderRadius: 8,
+      padding: 12,
+      marginBottom: 12,
+    },
+    noteTitle: {
+      fontSize: 9,
+      fontWeight: "bold",
+      color: STRONG_BLUE,
+      textTransform: "uppercase" as const,
+      borderBottomWidth: 1,
+      borderBottomColor: ZINC_200,
+      paddingBottom: 4,
+      marginBottom: 6,
+    },
+    noteText: {
+      fontSize: 9,
+      color: ZINC_700,
+      fontStyle: "italic",
+      lineHeight: 1.6,
+    },
+    noteAuthor: {
+      fontSize: 8,
+      color: ZINC_500,
+      fontWeight: "bold",
+      textAlign: "right" as const,
+      marginTop: 6,
+    },
+    signaturesRow: {
+      flexDirection: "row",
+      gap: 20,
+      paddingTop: 12,
+      borderTopWidth: 1,
+      borderTopColor: ZINC_200,
+    },
+    signatureCol: {
+      flex: 1,
+      alignItems: "center",
+      gap: 24,
+    },
+    signatureLabel: {
+      fontSize: 9,
+      color: ZINC_500,
+      textAlign: "center" as const,
+    },
+    signatureRole: {
+      fontSize: 9,
+      color: ZINC_800,
+      fontWeight: "bold",
+      textAlign: "center" as const,
+      marginTop: 2,
+    },
+    signatureLine: {
+      width: "70%",
+      borderBottomWidth: 1,
+      borderBottomColor: ZINC_400,
+      borderStyle: "dashed",
+      paddingBottom: 3,
+      alignSelf: "center" as const,
+    },
+    signatureName: {
+      fontSize: 9,
+      color: ZINC_600,
+      fontWeight: "semibold",
+      textAlign: "center" as const,
+    },
+    emptyState: {
+      padding: 20,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    emptyText: {
+      fontSize: 8,
+      color: ZINC_500,
+      fontStyle: "italic",
+    },
+  });
 
-// ── Main Component ──────────────────────────────────
-
-const RaporPDF: React.FC<RaporPDFProps> = ({
-  student,
-  grades,
-  attendance,
-  note,
-  classes,
-  avgGrade,
-  attendancePercent,
-  overallPredicate,
-  chartItems,
-  countA,
-  countB,
-  countC,
-  countD,
-}) => {
   const hasGrades = grades.length > 0;
-  const studentClass = classes.find((c) => c.id === student.kelas_id);
+  const studentClass = classes.find((c: RaporPDFClass) => c.id === student.kelas_id);
   const className = studentClass?.nama_kelas || "N/A";
 
-  return (
-    <Document>
-      <Page size="A4" style={styles.page}>
-        {/* ═══ HEADER ═══ */}
-        <View style={styles.headerRow}>
-          <View style={styles.headerLeft}>
-            <View style={styles.logoBox}>
-              <Text style={styles.logoText}>SG</Text>
-            </View>
-            <View>
-              <Text style={styles.headerTitle}>RAPOR HASIL BELAJAR SISWA</Text>
-              <Text style={styles.headerSub}>SG Cabang Nusantara</Text>
-            </View>
-          </View>
-          <View>
-            <Text style={styles.headerRightLabel}>Semester</Text>
-            <Text style={styles.headerRightValue}>
-              {student.semester} {student.tahun_ajaran}
-            </Text>
-          </View>
-        </View>
+  const DistribItems = [
+    { label: "A (80-100)", count: countA, color: EMERALD_600 },
+    { label: "B (70-79)", count: countB, color: "#2563eb" },
+    { label: "C (60-69)", count: countC, color: AMBER_500 },
+    { label: "D (<60)", count: countD, color: RED_500 },
+  ];
 
-        {/* ═══ IDENTITY ═══ */}
-        <View style={styles.identityRow}>
-          {student.foto_url ? (
-            <Image
-              src={student.foto_url}
-              style={styles.identityPhoto}
-              cache
-            />
-          ) : (
-            <View style={styles.identityPhotoPlaceholder}>
-              <Text style={styles.identityPhotoPlaceholderText}>SG</Text>
-            </View>
-          )}
-          <View style={styles.identityInfo}>
-            <View style={styles.identityItem}>
-              <Text style={styles.identityLabel}>Nama</Text>
-              <Text style={styles.identityValue}>{student.nama_lengkap}</Text>
-            </View>
-            <View style={styles.identityItem}>
-              <Text style={styles.identityLabel}>NIS</Text>
-              <Text style={styles.identityValue}>{student.nis}</Text>
-            </View>
-            <View style={styles.identityItem}>
-              <Text style={styles.identityLabel}>Kelas</Text>
-              <Text style={styles.identityValue}>{className}</Text>
-            </View>
-            <View style={styles.identityItem}>
-              <Text style={styles.identityLabel}>Semester</Text>
-              <Text style={styles.identityValue}>
-                {student.semester} {student.tahun_ajaran}
-              </Text>
-            </View>
-            <View style={styles.identityItemFull}>
-              <Text style={styles.identityLabel}>Asal Sekolah</Text>
-              <Text style={styles.identityValue}>{student.asal_sekolah}</Text>
-            </View>
-          </View>
-        </View>
+  const AttendanceRows = [
+    { label: "Hadir", value: attendance?.hadir || 0 },
+    { label: "Sakit", value: attendance?.sakit || 0 },
+    { label: "Izin", value: attendance?.izin || 0 },
+    { label: "Alpa", value: attendance?.alpha || 0 },
+  ];
 
-        {/* ═══ METRICS ═══ */}
-        <View style={styles.metricsRow}>
-          <View style={styles.metricCard}>
-            <Text style={styles.metricLabel}>Rata-Rata</Text>
-            <Text style={[styles.metricValue, { color: STRONG_BLUE }]}>
-              {avgGrade > 0 ? avgGrade.toFixed(2) : "0.00"}
-            </Text>
-            <Text
-              style={[
-                styles.metricBadge,
-                avgGrade >= 80
-                  ? styles.metricBadgeGreen
-                  : styles.metricBadgeMustard,
-              ]}
-            >
-              {overallPredicate.desc}
-            </Text>
-          </View>
+  return React.createElement(Document, null,
+    React.createElement(Page, { size: "A4", style: styles.page },
+      // ═══ HEADER ═══
+      React.createElement(View, { style: styles.headerRow },
+        React.createElement(View, { style: styles.headerLeft },
+          React.createElement(View, { style: styles.logoBox },
+            React.createElement(Text, { style: styles.logoText }, "SG")
+          ),
+          React.createElement(View, null,
+            React.createElement(Text, { style: styles.headerTitle }, "RAPOR HASIL BELAJAR SISWA"),
+            React.createElement(Text, { style: styles.headerSub }, "SG Cabang Nusantara"),
+          ),
+        ),
+        React.createElement(View, null,
+          React.createElement(Text, { style: styles.headerRightLabel }, "Semester"),
+          React.createElement(Text, { style: styles.headerRightValue }, `${student.semester} ${student.tahun_ajaran}`),
+        ),
+      ),
 
-          <View style={styles.metricCard}>
-            <Text style={styles.metricLabel}>Kehadiran</Text>
-            <Text style={[styles.metricValue, { color: EMERALD_600 }]}>
-              {Math.round(attendancePercent)}%
-            </Text>
-            <Text style={[styles.metricBadge, styles.metricBadgeGreen]}>
-              {attendancePercent >= 90
-                ? "Sangat Baik"
-                : attendancePercent >= 75
-                  ? "Baik"
-                  : "Kurang"}
-            </Text>
-          </View>
+      // ═══ IDENTITY ═══
+      React.createElement(View, { style: styles.identityRow },
+        student.foto_url
+          ? React.createElement(Image, { src: student.foto_url, style: styles.identityPhoto, cache: true })
+          : React.createElement(View, { style: styles.identityPhotoPlaceholder },
+              React.createElement(Text, { style: styles.identityPhotoPlaceholderText }, "SG"),
+            ),
+        React.createElement(View, { style: styles.identityInfo },
+          React.createElement(View, { style: styles.identityItem },
+            React.createElement(Text, { style: styles.identityLabel }, "Nama"),
+            React.createElement(Text, { style: styles.identityValue }, student.nama_lengkap),
+          ),
+          React.createElement(View, { style: styles.identityItem },
+            React.createElement(Text, { style: styles.identityLabel }, "NIS"),
+            React.createElement(Text, { style: styles.identityValue }, student.nis),
+          ),
+          React.createElement(View, { style: styles.identityItem },
+            React.createElement(Text, { style: styles.identityLabel }, "Kelas"),
+            React.createElement(Text, { style: styles.identityValue }, className),
+          ),
+          React.createElement(View, { style: styles.identityItem },
+            React.createElement(Text, { style: styles.identityLabel }, "Semester"),
+            React.createElement(Text, { style: styles.identityValue }, `${student.semester} ${student.tahun_ajaran}`),
+          ),
+          React.createElement(View, { style: styles.identityItemFull },
+            React.createElement(Text, { style: styles.identityLabel }, "Asal Sekolah"),
+            React.createElement(Text, { style: styles.identityValue }, student.asal_sekolah),
+          ),
+        ),
+      ),
 
-          <View style={styles.metricCard}>
-            <Text style={styles.metricLabel}>Total Hadir</Text>
-            <Text style={[styles.metricValue, { color: ZINC_800 }]}>
-              {attendance?.hadir || 0}
-            </Text>
-            <Text style={[styles.metricBadge, styles.metricBadgeZinc]}>
-              {attendance?.total_sesi || 0} Sesi
-            </Text>
-          </View>
+      // ═══ METRICS ═══
+      React.createElement(View, { style: styles.metricsRow },
+        ...[
+          { label: "Rata-Rata", value: avgGrade > 0 ? avgGrade.toFixed(2) : "0.00", color: STRONG_BLUE, badge: overallPredicate.desc, badgeStyle: avgGrade >= 80 ? styles.metricBadgeGreen : styles.metricBadgeMustard },
+          { label: "Kehadiran", value: `${Math.round(attendancePercent)}%`, color: EMERALD_600, badge: attendancePercent >= 90 ? "Sangat Baik" : attendancePercent >= 75 ? "Baik" : "Kurang", badgeStyle: styles.metricBadgeGreen },
+          { label: "Total Hadir", value: `${attendance?.hadir || 0}`, color: ZINC_800, badge: `${attendance?.total_sesi || 0} Sesi`, badgeStyle: styles.metricBadgeZinc },
+          { label: "Predikat", value: overallPredicate.letter, color: PURPLE_600, badge: overallPredicate.desc, badgeStyle: styles.metricBadgePurple },
+        ].map(m =>
+          React.createElement(View, { key: m.label, style: styles.metricCard },
+            React.createElement(Text, { style: styles.metricLabel }, m.label),
+            React.createElement(Text, { style: [styles.metricValue, { color: m.color }] }, String(m.value)),
+            React.createElement(Text, { style: [styles.metricBadge, m.badgeStyle] }, m.badge),
+          )
+        ),
+      ),
 
-          <View style={styles.metricCard}>
-            <Text style={styles.metricLabel}>Predikat</Text>
-            <Text style={[styles.metricValue, { color: PURPLE_600 }]}>
-              {overallPredicate.letter}
-            </Text>
-            <Text style={[styles.metricBadge, styles.metricBadgePurple]}>
-              {overallPredicate.desc}
-            </Text>
-          </View>
-        </View>
+      // ═══ BAR CHART ═══
+      React.createElement(View, { style: styles.barChartCard },
+        React.createElement(Text, { style: styles.sectionTitle }, "NILAI SETIAP MAPEL"),
+        ...(hasGrades
+          ? chartItems.map((item, i) =>
+              React.createElement(View, { key: i, style: styles.barRow },
+                React.createElement(Text, { style: styles.barLabel }, item.label),
+                React.createElement(View, { style: styles.barTrack },
+                  React.createElement(View, { style: [styles.barFill, { width: `${Math.max(8, Math.min(100, item.score || 0))}%` }] })
+                ),
+                React.createElement(Text, { style: styles.barScore }, String(item.score)),
+              )
+            )
+          : [React.createElement(View, { key: "empty", style: styles.emptyState },
+              React.createElement(Text, { style: styles.emptyText }, "Belum ada nilai"),
+            )]
+        ),
+      ),
 
-        {/* ═══ BAR CHART: NILAI SETIAP MAPEL ═══ */}
-        <View style={styles.barChartCard}>
-          <Text style={styles.sectionTitle}>NILAI SETIAP MAPEL</Text>
-          {hasGrades ? (
-            chartItems.map((item, i) => (
-              <View key={i} style={styles.barRow}>
-                <Text style={styles.barLabel}>{item.label}</Text>
-                <View style={styles.barTrack}>
-                  <View
-                    style={[
-                      styles.barFill,
-                      { width: `${Math.max(8, Math.min(100, item.score || 0))}%` },
-                    ]}
-                  />
-                </View>
-                <Text style={styles.barScore}>{item.score}</Text>
-              </View>
-            ))
-          ) : (
-            <EmptyState text="Belum ada nilai" />
-          )}
-        </View>
+      // ═══ 2-COLUMN CHARTS ═══
+      React.createElement(View, { style: styles.chart2Col },
+        // Grafik Kemampuan
+        React.createElement(View, { style: styles.chartCol },
+          React.createElement(Text, { style: styles.sectionTitle }, "GRAFIK KEMAMPUAN"),
+          ...(hasGrades
+            ? [
+                React.createElement(View, { key: "h", style: styles.tableHeader },
+                  React.createElement(Text, { style: styles.tableHeaderCell }, "Mata Pelajaran"),
+                  React.createElement(Text, { style: styles.tableHeaderCellRight }, "Nilai"),
+                ),
+                ...chartItems.map((item, i) =>
+                  React.createElement(View, { key: i, style: styles.tableRow },
+                    React.createElement(Text, { style: styles.tableRowCell }, item.label),
+                    React.createElement(Text, { style: [styles.tableRowCellScore, { color: getScoreColor(item.score) }] }, String(item.score)),
+                  )
+                ),
+              ]
+            : [React.createElement(View, { key: "empty", style: styles.emptyState },
+                React.createElement(Text, { style: styles.emptyText }, "Belum ada nilai"),
+              )]
+          ),
+        ),
+        // Distribusi
+        React.createElement(View, { style: styles.chartCol },
+          React.createElement(Text, { style: styles.sectionTitle }, "DISTRIBUSI NILAI"),
+          ...(hasGrades
+            ? DistribItems.map((item) =>
+                React.createElement(View, { key: item.label, style: styles.distribItem },
+                  React.createElement(View, { style: [styles.distribDot, { backgroundColor: item.color }] }),
+                  React.createElement(Text, { style: styles.distribLabel }, item.label),
+                  React.createElement(Text, { style: styles.distribCount }, `${item.count} Mapel`),
+                )
+              )
+            : [React.createElement(View, { key: "empty", style: styles.emptyState },
+                React.createElement(Text, { style: styles.emptyText }, "Belum ada nilai"),
+              )]
+          ),
+        ),
+      ),
 
-        {/* ═══ 2-COLUMN CHARTS ═══ */}
-        <View style={styles.chart2Col}>
-          {/* Grafik Kemampuan */}
-          <View style={styles.chartCol}>
-            <Text style={styles.sectionTitle}>GRAFIK KEMAMPUAN</Text>
-            {hasGrades ? (
-              <View>
-                <View style={styles.tableHeader}>
-                  <Text style={styles.tableHeaderCell}>Mata Pelajaran</Text>
-                  <Text style={styles.tableHeaderCellRight}>Nilai</Text>
-                </View>
-                {chartItems.map((item, i) => (
-                  <View key={i} style={styles.tableRow}>
-                    <Text style={styles.tableRowCell}>{item.label}</Text>
-                    <Text
-                      style={[
-                        styles.tableRowCellScore,
-                        { color: getScoreColor(item.score) },
-                      ]}
-                    >
-                      {item.score}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-            ) : (
-              <EmptyState text="Belum ada nilai" />
-            )}
-          </View>
+      // ═══ DETAIL ═══
+      React.createElement(View, { style: styles.detailSection },
+        // Kehadiran
+        React.createElement(View, { style: styles.detailCol },
+          React.createElement(Text, { style: styles.sectionTitle }, "KEHADIRAN"),
+          ...(attendance
+            ? [
+                React.createElement(View, { key: "h", style: styles.thRow },
+                  React.createElement(Text, { style: [styles.thCellSm, { flex: 1 }] }, "Keterangan"),
+                  React.createElement(Text, { style: [styles.thCellRight, { width: 50 }] }, "Jumlah"),
+                ),
+                ...AttendanceRows.map((row) =>
+                  React.createElement(View, { key: row.label, style: styles.tdRow },
+                    React.createElement(Text, { style: [styles.tdCellSm, { flex: 1 }] }, row.label),
+                    React.createElement(Text, { style: [styles.tdCellRight, { width: 50 }] }, `${row.value} Sesi`),
+                  )
+                ),
+              ]
+            : [React.createElement(View, { key: "empty", style: styles.emptyState },
+                React.createElement(Text, { style: styles.emptyText }, "Tidak ada data"),
+              )]
+          ),
+        ),
+        // Detail Nilai
+        React.createElement(View, { style: styles.detailCol2 },
+          React.createElement(Text, { style: styles.sectionTitle }, "DETAIL NILAI"),
+          ...(hasGrades
+            ? [
+                React.createElement(View, { key: "h", style: styles.thRow },
+                  React.createElement(Text, { style: { flex: 1, fontSize: 8, fontWeight: "bold", color: ZINC_500 } }, "Mata Pelajaran"),
+                  React.createElement(Text, { style: { width: 36, fontSize: 8, fontWeight: "bold", color: ZINC_500, textAlign: "center" as const } }, "Tentor"),
+                  React.createElement(Text, { style: { width: 55, fontSize: 8, fontWeight: "bold", color: ZINC_500, textAlign: "center" as const } }, "Waktu"),
+                  React.createElement(Text, { style: { width: 22, fontSize: 8, fontWeight: "bold", color: ZINC_500, textAlign: "right" as const } }, "Skor"),
+                ),
+                ...grades.map((g) =>
+                  React.createElement(View, { key: g.id, style: styles.tdRow },
+                    React.createElement(Text, { style: styles.tdCellMapel },
+                      g.nama_mapel,
+                      React.createElement(Text, { style: styles.tdCellKategori }, ` (${g.kategori})`),
+                    ),
+                    React.createElement(Text, { style: styles.tdCellCenter }, g.kode_tentor || "-"),
+                    React.createElement(Text, { style: styles.tdCellWaktu }, formatDate(g.tanggal_pembelajaran, g.jam)),
+                    React.createElement(Text, { style: styles.tdSkor }, String(g.skor)),
+                  )
+                ),
+              ]
+            : [React.createElement(View, { key: "empty", style: styles.emptyState },
+                React.createElement(Text, { style: styles.emptyText }, "Belum ada nilai terinput"),
+              )]
+          ),
+        ),
+      ),
 
-          {/* Distribusi Nilai */}
-          <View style={styles.chartCol}>
-            <Text style={styles.sectionTitle}>DISTRIBUSI NILAI</Text>
-            {hasGrades ? (
-              <View>
-                {[
-                  { label: "A (80-100)", count: countA, color: EMERALD_600 },
-                  { label: "B (70-79)", count: countB, color: "#2563eb" },
-                  { label: "C (60-69)", count: countC, color: AMBER_500 },
-                  { label: "D (<60)", count: countD, color: RED_500 },
-                ].map((item) => (
-                  <View key={item.label} style={styles.distribItem}>
-                    <View
-                      style={[styles.distribDot, { backgroundColor: item.color }]}
-                    />
-                    <Text style={styles.distribLabel}>{item.label}</Text>
-                    <Text style={styles.distribCount}>{item.count} Mapel</Text>
-                  </View>
-                ))}
-              </View>
-            ) : (
-              <EmptyState text="Belum ada nilai" />
-            )}
-          </View>
-        </View>
+      // ═══ CATATAN ═══
+      ...(note
+        ? [React.createElement(View, { key: "note", style: styles.noteCard },
+            React.createElement(Text, { style: styles.noteTitle }, "CATATAN WALI KELAS"),
+            React.createElement(Text, { style: styles.noteText }, `\u201c${note.catatan}\u201d`),
+            React.createElement(Text, { style: styles.noteAuthor }, `Nama Guru: ${note.nama_guru}`),
+          )]
+        : []
+      ),
 
-        {/* ═══ DETAIL TABLES ═══ */}
-        <View style={styles.detailSection}>
-          {/* Kehadiran */}
-          <View style={styles.detailCol}>
-            <Text style={styles.sectionTitle}>KEHADIRAN</Text>
-            {attendance ? (
-              <View style={styles.tableFull}>
-                <View style={styles.thRow}>
-                  <Text style={[styles.thCellSm, { flex: 1 }]}>
-                    Keterangan
-                  </Text>
-                  <Text style={[styles.thCellRight, { width: 50 }]}>
-                    Jumlah
-                  </Text>
-                </View>
-                {[
-                  { label: "Hadir", value: attendance.hadir },
-                  { label: "Sakit", value: attendance.sakit },
-                  { label: "Izin", value: attendance.izin },
-                  { label: "Alpa", value: attendance.alpha },
-                ].map((row) => (
-                  <View key={row.label} style={styles.tdRow}>
-                    <Text style={[styles.tdCellSm, { flex: 1 }]}>
-                      {row.label}
-                    </Text>
-                    <Text style={[styles.tdCellRight, { width: 50 }]}>
-                      {row.value} Sesi
-                    </Text>
-                  </View>
-                ))}
-              </View>
-            ) : (
-              <EmptyState text="Tidak ada data" />
-            )}
-          </View>
-
-          {/* Detail Nilai */}
-          <View style={styles.detailCol2}>
-            <Text style={styles.sectionTitle}>DETAIL NILAI</Text>
-            {hasGrades ? (
-              <View style={styles.tableFull}>
-                <View style={styles.thRow}>
-                  <Text style={{ flex: 1, fontSize: 8, fontWeight: "bold", color: ZINC_500 }}>
-                    Mata Pelajaran
-                  </Text>
-                  <Text style={{ width: 36, fontSize: 8, fontWeight: "bold", color: ZINC_500, textAlign: "center" }}>
-                    Tentor
-                  </Text>
-                  <Text style={{ width: 55, fontSize: 8, fontWeight: "bold", color: ZINC_500, textAlign: "center" }}>
-                    Waktu
-                  </Text>
-                  <Text style={{ width: 22, fontSize: 8, fontWeight: "bold", color: ZINC_500, textAlign: "right" }}>
-                    Skor
-                  </Text>
-                </View>
-                {grades.map((g) => (
-                  <View key={g.id} style={styles.tdRow}>
-                    <Text style={styles.tdCellMapel}>
-                      {g.nama_mapel}{" "}
-                      <Text style={styles.tdCellKategori}>({g.kategori})</Text>
-                    </Text>
-                    <Text style={styles.tdCellCenter}>
-                      {g.kode_tentor || "-"}
-                    </Text>
-                    <Text style={styles.tdCellWaktu}>
-                      {formatDate(g.tanggal_pembelajaran, g.jam)}
-                    </Text>
-                    <Text style={styles.tdSkor}>{g.skor}</Text>
-                  </View>
-                ))}
-              </View>
-            ) : (
-              <EmptyState text="Belum ada nilai terinput" />
-            )}
-          </View>
-        </View>
-
-        {/* ═══ CATATAN GURU ═══ */}
-        {note ? (
-          <View style={styles.noteCard}>
-            <Text style={styles.noteTitle}>CATATAN WALI KELAS</Text>
-            <Text style={styles.noteText}>&ldquo;{note.catatan}&rdquo;</Text>
-            <Text style={styles.noteAuthor}>Nama Guru: {note.nama_guru}</Text>
-          </View>
-        ) : null}
-
-        {/* ═══ SIGNATURES ═══ */}
-        <View style={styles.signaturesRow}>
-          <View style={styles.signatureCol}>
-            <View>
-              <Text style={styles.signatureLabel}>Dibuat Oleh,</Text>
-              <Text style={styles.signatureRole}>Staf Akademik</Text>
-            </View>
-            <View style={styles.signatureLine}>
-              <Text style={styles.signatureName}>
-                {note?.nama_guru || "Prof. Dr. Dora The Explorer"}
-              </Text>
-            </View>
-          </View>
-          <View style={styles.signatureCol}>
-            <View>
-              <Text style={styles.signatureLabel}>Mengetahui,</Text>
-              <Text style={styles.signatureRole}>Pimpinan Cabang</Text>
-            </View>
-            <View style={styles.signatureLine}>
-              <Text style={styles.signatureName}>Dr. Boots M.Pd</Text>
-            </View>
-          </View>
-        </View>
-      </Page>
-    </Document>
+      // ═══ SIGNATURES ═══
+      React.createElement(View, { style: styles.signaturesRow },
+        React.createElement(View, { style: styles.signatureCol },
+          React.createElement(View, null,
+            React.createElement(Text, { style: styles.signatureLabel }, "Dibuat Oleh,"),
+            React.createElement(Text, { style: styles.signatureRole }, "Staf Akademik"),
+          ),
+          React.createElement(View, { style: styles.signatureLine },
+            React.createElement(Text, { style: styles.signatureName }, note?.nama_guru || "Prof. Dr. Dora The Explorer"),
+          ),
+        ),
+        React.createElement(View, { style: styles.signatureCol },
+          React.createElement(View, null,
+            React.createElement(Text, { style: styles.signatureLabel }, "Mengetahui,"),
+            React.createElement(Text, { style: styles.signatureRole }, "Pimpinan Cabang"),
+          ),
+          React.createElement(View, { style: styles.signatureLine },
+            React.createElement(Text, { style: styles.signatureName }, "Dr. Boots M.Pd"),
+          ),
+        ),
+      ),
+    ),
   );
-};
-
-export default RaporPDF;
+}

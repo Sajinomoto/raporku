@@ -36,8 +36,8 @@ import {
   FileImage,
   Download
 } from "lucide-react";
-import { pdf } from "@react-pdf/renderer";
-import RaporPDF from "@/components/rapor-pdf";
+// RaporPDF dan @react-pdf/renderer di-import dynamic di handleDownloadPDF
+// untuk menghindari error sharp (native addon) saat build Vercel
 
 // Dynamically import ReactApexChart to prevent SSR window error
 const ReactApexChart = dynamic(() => import("react-apexcharts"), { ssr: false });
@@ -1169,25 +1169,23 @@ export default function SiswaPage() {
     setIsDownloadingImage(true);
 
     try {
-      const pdfDoc = pdf(
-        <RaporPDF
-          student={selectedStudent!}
-          grades={studentGrades}
-          attendance={studentAttendance}
-          note={studentNote}
-          classes={classes}
-          avgGrade={avgGrade}
-          attendancePercent={attendancePercent}
-          overallPredicate={overallPredicate}
-          chartItems={chartItems}
-          countA={countA}
-          countB={countB}
-          countC={countC}
-          countD={countD}
-        />
-      );
+      const { downloadPDF } = await import("@/lib/download-pdf");
 
-      const blob = await pdfDoc.toBlob();
+      const blob = await downloadPDF({
+        student: selectedStudent!,
+        grades: studentGrades,
+        attendance: studentAttendance,
+        note: studentNote,
+        classes: classes,
+        avgGrade: avgGrade,
+        attendancePercent: attendancePercent,
+        overallPredicate: overallPredicate,
+        chartItems: chartItems,
+        countA: countA,
+        countB: countB,
+        countC: countC,
+        countD: countD,
+      });
 
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
