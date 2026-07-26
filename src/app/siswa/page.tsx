@@ -36,7 +36,7 @@ import {
   FileImage,
   Download
 } from "lucide-react";
-import html2canvas from "html2canvas";
+import { toPng } from "html-to-image";
 
 // Dynamically import ReactApexChart to prevent SSR window error
 const ReactApexChart = dynamic(() => import("react-apexcharts"), { ssr: false });
@@ -1175,20 +1175,19 @@ export default function SiswaPage() {
       }
 
       try {
-        const canvas = await html2canvas(longReportRef.current, {
-          scale: 2,
-          useCORS: true,
+        const dataUrl = await toPng(longReportRef.current, {
+          quality: 0.95,
+          pixelRatio: 2,
           backgroundColor: "#ffffff",
-          logging: false,
+          cacheBust: true,
         });
 
-        const image = canvas.toDataURL("image/png");
         const link = document.createElement("a");
         const cleanName = selectedStudent?.nama_lengkap
           ? selectedStudent.nama_lengkap.replace(/\s+/g, "_")
           : "Siswa";
         link.download = `Rapor_${cleanName}_${selectedStudent?.nis || ""}.png`;
-        link.href = image;
+        link.href = dataUrl;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -1197,7 +1196,7 @@ export default function SiswaPage() {
       } finally {
         setIsDownloadingImage(false);
       }
-    }, 250);
+    }, 300);
   };
 
   // Filter students
