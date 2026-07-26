@@ -33,8 +33,10 @@ import {
   GraduationCap,
   ChevronDown,
   FileText,
-  FileImage
+  FileImage,
+  Download
 } from "lucide-react";
+import html2canvas from "html2canvas";
 
 // Dynamically import ReactApexChart to prevent SSR window error
 const ReactApexChart = dynamic(() => import("react-apexcharts"), { ssr: false });
@@ -134,6 +136,8 @@ export default function SiswaPage() {
   const [previewMode, setPreviewMode] = useState<"a4" | "long">("a4");
   const [isPrintDropdownOpen, setIsPrintDropdownOpen] = useState(false);
   const printDropdownRef = useRef<HTMLDivElement>(null);
+  const longReportRef = useRef<HTMLDivElement>(null);
+  const [isDownloadingImage, setIsDownloadingImage] = useState(false);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -1159,14 +1163,41 @@ export default function SiswaPage() {
     }, 150);
   };
 
-  const handlePrintLong = () => {
-    setPreviewMode("long");
+  const handleDownloadLongImage = async () => {
     setIsPrintDropdownOpen(false);
-    document.body.classList.remove("print-a4-mode");
-    document.body.classList.add("print-long-mode");
-    setTimeout(() => {
-      window.print();
-    }, 150);
+    setPreviewMode("long");
+    setIsDownloadingImage(true);
+
+    setTimeout(async () => {
+      if (!longReportRef.current) {
+        setIsDownloadingImage(false);
+        return;
+      }
+
+      try {
+        const canvas = await html2canvas(longReportRef.current, {
+          scale: 2,
+          useCORS: true,
+          backgroundColor: "#ffffff",
+          logging: false,
+        });
+
+        const image = canvas.toDataURL("image/png");
+        const link = document.createElement("a");
+        const cleanName = selectedStudent?.nama_lengkap
+          ? selectedStudent.nama_lengkap.replace(/\s+/g, "_")
+          : "Siswa";
+        link.download = `Rapor_${cleanName}_${selectedStudent?.nis || ""}.png`;
+        link.href = image;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } catch (err) {
+        console.error("Error generating long image PNG:", err);
+      } finally {
+        setIsDownloadingImage(false);
+      }
+    }, 250);
   };
 
   // Filter students
@@ -1236,15 +1267,17 @@ export default function SiswaPage() {
       id: "grades-bar",
       toolbar: { show: false },
       foreColor: "#475569",
+      animations: { enabled: false },
     },
     plotOptions: {
       bar: {
         horizontal: true,
-        barHeight: "65%",
-        borderRadius: 4,
+        barHeight: "55%",
+        borderRadius: 3,
       }
     },
     colors: ["#002583"],
+    dataLabels: { enabled: false },
     xaxis: {
       categories: hasAggregated 
         ? aggregatedGrades.map(g => cleanSubjectName(g.nama_mapel))
@@ -1253,7 +1286,8 @@ export default function SiswaPage() {
       labels: {
         style: {
           fontWeight: 600,
-          colors: ["#475569"]
+          colors: ["#475569"],
+          fontSize: "9px"
         }
       }
     },
@@ -1261,12 +1295,14 @@ export default function SiswaPage() {
       labels: {
         style: {
           fontWeight: 600,
-          colors: ["#475569"]
+          colors: ["#475569"],
+          fontSize: "9px"
         }
       }
     },
     grid: {
       borderColor: "#e2e8f0",
+      padding: { top: 0, right: 10, bottom: 0, left: 5 },
       xaxis: { lines: { show: true } }
     }
   };
@@ -1286,10 +1322,11 @@ export default function SiswaPage() {
       id: "radar-caps",
       toolbar: { show: false },
       foreColor: "#475569",
+      animations: { enabled: false },
     },
     plotOptions: {
       radar: {
-        size: 70,
+        size: 55,
         polygons: {
           strokeColors: "#e2e8f0",
           connectorColors: "#e2e8f0",
@@ -1307,7 +1344,7 @@ export default function SiswaPage() {
       opacity: 0.15
     },
     markers: {
-      size: 4
+      size: 3
     },
     xaxis: {
       categories: hasAggregated
@@ -1317,18 +1354,12 @@ export default function SiswaPage() {
         style: {
           fontWeight: 700,
           colors: Array(hasAggregated ? aggregatedGrades.length : studentGrades.length).fill("#475569"),
-          fontSize: "9px"
+          fontSize: "8px"
         }
       }
     },
     yaxis: {
-      max: 100,
-      tickAmount: 5,
-      labels: {
-        formatter: function(val: number) {
-          return Math.round(val).toString();
-        }
-      }
+      show: false
     },
     grid: {
       borderColor: "#e2e8f0"
@@ -1363,6 +1394,7 @@ export default function SiswaPage() {
     chart: {
       id: "donut-dist",
       foreColor: "#475569",
+      animations: { enabled: false },
     },
     dataLabels: {
       enabled: false
@@ -1370,17 +1402,18 @@ export default function SiswaPage() {
     labels: ["A (80-100)", "B (70-79)", "C (60-69)", "D (<60)"],
     colors: ["#10b981", "#3b82f6", "#f59e0b", "#ef4444"],
     legend: {
-      position: "right" as const,
-      horizontalAlign: "left" as const,
-      fontSize: "11px",
+      position: "bottom" as const,
+      horizontalAlign: "center" as const,
+      fontSize: "9px",
       fontWeight: 600,
+      itemMargin: { horizontal: 4, vertical: 2 },
       markers: {
-        size: 5
+        size: 4
       },
       formatter: function(val: string, opts: any) {
         const seriesIndex = opts.seriesIndex;
         const value = opts.w.globals.series[seriesIndex];
-        return val + ": " + value + " Mapel";
+        return val + ": " + value;
       }
     },
     stroke: {
@@ -1390,35 +1423,28 @@ export default function SiswaPage() {
     plotOptions: {
       pie: {
         donut: {
-          size: "70%",
+          size: "65%",
           labels: {
             show: true,
             name: {
               show: true,
-              fontSize: "10px",
+              fontSize: "9px",
               fontWeight: 600,
               color: "#64748b",
-              offsetY: -5
             },
             value: {
               show: true,
-              fontSize: "16px",
+              fontSize: "14px",
               fontWeight: 800,
               color: "#0f172a",
-              offsetY: 5,
-              formatter: function(val: string) {
-                return val;
-              }
             },
             total: {
               show: true,
-              label: "Mata Pelajaran",
+              label: "Total Mapel",
+              fontSize: "8px",
               color: "#64748b",
-              fontWeight: 700,
-              fontSize: "9px",
-              formatter: function (w: any) {
-                const total = w.globals.seriesTotals.reduce((a: number, b: number) => a + b, 0);
-                return String(total);
+              formatter: function(w: any) {
+                return w.globals.seriesTotals.reduce((a: number, b: number) => a + b, 0);
               }
             }
           }
@@ -1801,14 +1827,15 @@ export default function SiswaPage() {
 
                     <button
                       type="button"
-                      onClick={handlePrintLong}
-                      className="w-full text-left px-3 py-2 text-xs text-zinc-700 hover:bg-zinc-50 hover:text-strong-blue font-bold flex items-center justify-between transition-colors cursor-pointer group border-t border-zinc-100"
+                      disabled={isDownloadingImage}
+                      onClick={handleDownloadLongImage}
+                      className="w-full text-left px-3 py-2 text-xs text-zinc-700 hover:bg-zinc-50 hover:text-strong-blue font-bold flex items-center justify-between transition-colors cursor-pointer group border-t border-zinc-100 disabled:opacity-50"
                     >
                       <div className="flex items-center gap-2">
-                        <FileImage size={15} className="text-amber-600" />
+                        <Download size={15} className="text-amber-600" />
                         <div>
-                          <span className="block">Cetak Long Image</span>
-                          <span className="text-[10px] text-zinc-400 font-normal">Satu halaman memanjang bersambung</span>
+                          <span className="block">{isDownloadingImage ? "Mengunduh Gambar..." : "Unduh Long Image (PNG)"}</span>
+                          <span className="text-[10px] text-zinc-400 font-normal">Langsung unduh PNG tanpa dialog PDF</span>
                         </div>
                       </div>
                       {previewMode === "long" && <span className="w-1.5 h-1.5 rounded-full bg-strong-blue" />}
@@ -2326,47 +2353,47 @@ export default function SiswaPage() {
                 <div ref={printRef} className="print-container max-w-4xl mx-auto space-y-8 animate-fade-in">
                   
                   {previewMode === "a4" ? (
-                    /* MODE A4: Multi-Halaman Fisik A4 Terpisah */
+                    /* MODE A4: Multi-Halaman Fisik A4 Terpisah (Strictly 2 Halaman) */
                     <>
                       {/* HALAMAN 1 */}
-                      <div className="bg-white border border-zinc-200 rounded-xl p-8 space-y-8 shadow-2xl text-zinc-800 relative min-h-[1050px] flex flex-col justify-between print-page-break">
-                        <div className="space-y-8">
+                      <div className="bg-white border border-zinc-200 rounded-xl p-5 sm:p-6 space-y-4 shadow-2xl text-zinc-800 relative min-h-[960px] flex flex-col justify-between print-page-break print-avoid-break">
+                        <div className="space-y-4">
                           {/* Kop Header Rapor */}
-                          <div className="flex justify-between items-center border-b-2 print-border pb-4">
+                          <div className="flex justify-between items-center border-b-2 print-border pb-3">
                             <div className="flex items-center gap-3">
-                              <div className="p-3 bg-mustard rounded-xl text-strong-blue font-black text-xl flex items-center justify-center leading-none shadow-sm">
+                              <div className="p-2.5 bg-mustard rounded-xl text-strong-blue font-black text-lg flex items-center justify-center leading-none shadow-sm">
                                 SG
                               </div>
                               <div>
-                                <h1 className="text-xl font-black text-strong-blue print-text tracking-wide leading-none">RAPOR HASIL BELAJAR SISWA</h1>
-                                <span className="text-xs text-zinc-500 print-text-muted font-bold">SG Cabang Nusantara</span>
+                                <h1 className="text-lg font-black text-strong-blue print-text tracking-wide leading-none">RAPOR HASIL BELAJAR SISWA</h1>
+                                <span className="text-[11px] text-zinc-500 print-text-muted font-bold">SG Cabang Nusantara</span>
                               </div>
                             </div>
                             <div className="text-right">
-                              <span className="text-[10px] text-zinc-500 print-text-muted font-bold block uppercase tracking-wider">Semester</span>
-                              <span className="font-extrabold text-strong-blue print-text text-sm">{selectedStudent.semester} {selectedStudent.tahun_ajaran}</span>
+                              <span className="text-[9px] text-zinc-500 print-text-muted font-bold block uppercase tracking-wider">Semester</span>
+                              <span className="font-extrabold text-strong-blue print-text text-xs">{selectedStudent.semester} {selectedStudent.tahun_ajaran}</span>
                             </div>
                           </div>
 
                           {/* Student Identity Row */}
-                          <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+                          <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-center">
                             <div className="md:col-span-3 flex justify-center">
                               {selectedStudent.foto_url ? (
                                 <NextImage 
                                   src={selectedStudent.foto_url} 
                                   alt={selectedStudent.nama_lengkap} 
-                                  width={128}
-                                  height={128}
-                                  className="w-32 h-32 rounded-xl object-cover border-2 border-zinc-200 print-border bg-zinc-50"
+                                  width={96}
+                                  height={96}
+                                  className="w-24 h-24 rounded-xl object-cover border-2 border-zinc-200 print-border bg-zinc-50"
                                 />
                               ) : (
-                                <div className="w-32 h-32 rounded-xl bg-strong-blue/10 text-strong-blue border-2 border-zinc-200 print-border flex items-center justify-center">
-                                  <UserRound size={64} />
+                                <div className="w-24 h-24 rounded-xl bg-strong-blue/10 text-strong-blue border-2 border-zinc-200 print-border flex items-center justify-center">
+                                  <UserRound size={48} />
                                 </div>
                               )}
                             </div>
 
-                            <div className="md:col-span-9 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
+                            <div className="md:col-span-9 grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-1.5 text-xs">
                               <div className="flex justify-between border-b border-zinc-200 print-border py-1">
                                 <span className="text-zinc-500 print-text-muted font-medium">Nama Lengkap</span>
                                 <span className="text-zinc-800 print-text font-bold">{selectedStudent.nama_lengkap}</span>
@@ -2398,106 +2425,106 @@ export default function SiswaPage() {
 
                           {/* Rangkuman Metrik Row */}
                           {loadingDetails ? (
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                               {Array(4).fill(0).map((_, idx) => (
-                                <div key={idx} className="bg-zinc-50 border border-zinc-200 rounded-xl p-4 space-y-2 animate-pulse">
-                                  <div className="h-3 bg-zinc-200 rounded w-16 mx-auto" />
-                                  <div className="h-6 bg-zinc-300 rounded w-12 mx-auto" />
-                                  <div className="h-3 bg-zinc-200 rounded w-20 mx-auto" />
+                                <div key={idx} className="bg-zinc-50 border border-zinc-200 rounded-xl p-3 space-y-1.5 animate-pulse">
+                                  <div className="h-2.5 bg-zinc-200 rounded w-16 mx-auto" />
+                                  <div className="h-5 bg-zinc-300 rounded w-12 mx-auto" />
+                                  <div className="h-2.5 bg-zinc-200 rounded w-20 mx-auto" />
                                 </div>
                               ))}
                             </div>
                           ) : (
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                              <div className="bg-zinc-50 border border-zinc-200 print-card rounded-xl p-4 text-center shadow-xs">
-                                <span className="text-[10px] text-zinc-500 print-text-muted font-bold uppercase tracking-wider block">Rata-Rata</span>
-                                <p className="text-2xl font-black text-strong-blue print-text mt-1">{avgGrade > 0 ? avgGrade.toFixed(2) : "0.00"}</p>
-                                <span className={`inline-block text-[9px] font-bold px-2 py-0.5 rounded mt-1.5 ${
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                              <div className="bg-zinc-50 border border-zinc-200 print-card rounded-xl p-3 text-center shadow-xs">
+                                <span className="text-[9px] text-zinc-500 print-text-muted font-bold uppercase tracking-wider block">Rata-Rata</span>
+                                <p className="text-xl font-black text-strong-blue print-text mt-0.5">{avgGrade > 0 ? avgGrade.toFixed(2) : "0.00"}</p>
+                                <span className={`inline-block text-[8px] font-bold px-1.5 py-0.5 rounded mt-1 ${
                                   avgGrade >= 80 ? "bg-emerald-500/10 text-emerald-600" : "bg-mustard/20 text-[#A67800]"
                                 }`}>
                                   {overallPredicate.desc}
                                 </span>
                               </div>
 
-                              <div className="bg-zinc-50 border border-zinc-200 print-card rounded-xl p-4 text-center shadow-xs">
-                                <span className="text-[10px] text-zinc-500 print-text-muted font-bold uppercase tracking-wider block">Kehadiran</span>
-                                <p className="text-2xl font-black text-emerald-600 print-text mt-1">{Math.round(attendancePercent)}%</p>
-                                <span className="inline-block text-[9px] font-bold px-2 py-0.5 rounded mt-1.5 bg-emerald-500/10 text-emerald-600">
+                              <div className="bg-zinc-50 border border-zinc-200 print-card rounded-xl p-3 text-center shadow-xs">
+                                <span className="text-[9px] text-zinc-500 print-text-muted font-bold uppercase tracking-wider block">Kehadiran</span>
+                                <p className="text-xl font-black text-emerald-600 print-text mt-0.5">{Math.round(attendancePercent)}%</p>
+                                <span className="inline-block text-[8px] font-bold px-1.5 py-0.5 rounded mt-1 bg-emerald-500/10 text-emerald-600">
                                   {attendancePercent >= 90 ? "Sangat Baik" : attendancePercent >= 75 ? "Baik" : "Kurang"}
                                 </span>
                               </div>
 
-                              <div className="bg-zinc-50 border border-zinc-200 print-card rounded-xl p-4 text-center shadow-xs">
-                                <span className="text-[10px] text-zinc-500 print-text-muted font-bold uppercase tracking-wider block">Total Hadir</span>
-                                <p className="text-2xl font-black text-zinc-800 print-text mt-1">{(studentAttendance?.hadir || 0)} Sesi</p>
-                                <span className="inline-block text-[9px] font-bold px-2 py-0.5 rounded mt-1.5 bg-zinc-200 print-fill-card text-zinc-600 print-text-muted">
+                              <div className="bg-zinc-50 border border-zinc-200 print-card rounded-xl p-3 text-center shadow-xs">
+                                <span className="text-[9px] text-zinc-500 print-text-muted font-bold uppercase tracking-wider block">Total Hadir</span>
+                                <p className="text-xl font-black text-zinc-800 print-text mt-0.5">{(studentAttendance?.hadir || 0)} Sesi</p>
+                                <span className="inline-block text-[8px] font-bold px-1.5 py-0.5 rounded mt-1 bg-zinc-200 print-fill-card text-zinc-600 print-text-muted">
                                   Dari {studentAttendance?.total_sesi || 0} Sesi
                                 </span>
                               </div>
 
-                              <div className="bg-zinc-50 border border-zinc-200 print-card rounded-xl p-4 text-center shadow-xs">
-                                <span className="text-[10px] text-zinc-500 print-text-muted font-bold uppercase tracking-wider block">Predikat</span>
-                                <p className="text-2xl font-black text-purple-600 print-text mt-1">{overallPredicate.letter}</p>
-                                <span className="inline-block text-[9px] font-bold px-2 py-0.5 rounded mt-1.5 bg-purple-500/10 text-purple-600">
+                              <div className="bg-zinc-50 border border-zinc-200 print-card rounded-xl p-3 text-center shadow-xs">
+                                <span className="text-[9px] text-zinc-500 print-text-muted font-bold uppercase tracking-wider block">Predikat</span>
+                                <p className="text-xl font-black text-purple-600 print-text mt-0.5">{overallPredicate.letter}</p>
+                                <span className="inline-block text-[8px] font-bold px-1.5 py-0.5 rounded mt-1 bg-purple-500/10 text-purple-600">
                                   {overallPredicate.desc}
                                 </span>
                               </div>
                             </div>
                           )}
 
-                          {/* Visualisasi Grafik Row (ApexCharts) */}
+                          {/* Visualisasi Grafik Row (ApexCharts - Optimized for 3 Columns) */}
                           {loadingDetails ? (
-                            <div className="grid grid-cols-1 gap-6 print-grid">
+                            <div className="grid grid-cols-1 gap-4 print-grid">
                               {Array(3).fill(0).map((_, idx) => (
-                                <div key={idx} className="bg-white border border-zinc-200 rounded-xl p-6 h-[280px] flex flex-col justify-center items-center gap-3 animate-pulse">
-                                  <div className="h-4 bg-zinc-200 rounded w-32" />
-                                  <div className="w-full flex-1 bg-zinc-50 rounded-xl flex items-center justify-center text-xs text-zinc-400 font-bold uppercase tracking-wider">
+                                <div key={idx} className="bg-white border border-zinc-200 rounded-xl p-4 h-[220px] flex flex-col justify-center items-center gap-2 animate-pulse">
+                                  <div className="h-3.5 bg-zinc-200 rounded w-28" />
+                                  <div className="w-full flex-1 bg-zinc-50 rounded-xl flex items-center justify-center text-[10px] text-zinc-400 font-bold uppercase tracking-wider">
                                     Memuat grafik...
                                   </div>
                                 </div>
                               ))}
                             </div>
                           ) : (
-                            <div className="grid grid-cols-1 gap-6 print-grid">
-                              <div className="bg-white border border-zinc-200 rounded-xl p-4 space-y-2 shadow-xs">
-                                <h4 className="text-xs font-bold text-strong-blue tracking-wide border-b border-zinc-200 pb-2">NILAI SETIAP MAPEL</h4>
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 print-grid">
+                              <div className="bg-white border border-zinc-200 rounded-xl p-3 space-y-1 shadow-2xs print-chart-card overflow-hidden">
+                                <h4 className="text-[11px] font-bold text-strong-blue tracking-wide border-b border-zinc-200 pb-1.5 uppercase">NILAI SETIAP MAPEL</h4>
                                 {studentGrades.length > 0 ? (
                                   <ReactApexChart 
                                     options={barChartOptions} 
                                     series={barChartSeries} 
                                     type="bar" 
-                                    height={dynamicBarHeight} 
+                                    height={190} 
                                   />
                                 ) : (
-                                  <div className="h-[240px] flex items-center justify-center text-[10px] text-zinc-500 font-medium">Belum ada nilai</div>
+                                  <div className="h-[190px] flex items-center justify-center text-[10px] text-zinc-500 font-medium">Belum ada nilai</div>
                                 )}
                               </div>
 
-                              <div className="bg-white border border-zinc-200 rounded-xl p-4 space-y-2 shadow-xs">
-                                <h4 className="text-xs font-bold text-strong-blue tracking-wide border-b border-zinc-200 pb-2">GRAFIK KEMAMPUAN (RADAR)</h4>
+                              <div className="bg-white border border-zinc-200 rounded-xl p-3 space-y-1 shadow-2xs print-chart-card overflow-hidden">
+                                <h4 className="text-[11px] font-bold text-strong-blue tracking-wide border-b border-zinc-200 pb-1.5 uppercase">GRAFIK KEMAMPUAN</h4>
                                 {studentGrades.length > 0 ? (
                                   <ReactApexChart 
                                     options={radarChartOptions} 
                                     series={radarChartSeries} 
                                     type="radar" 
-                                    height={240} 
+                                    height={190} 
                                   />
                                 ) : (
-                                  <div className="h-[240px] flex items-center justify-center text-[10px] text-zinc-500 font-medium">Belum ada nilai</div>
+                                  <div className="h-[190px] flex items-center justify-center text-[10px] text-zinc-500 font-medium">Belum ada nilai</div>
                                 )}
                               </div>
 
-                              <div className="bg-white border border-zinc-200 rounded-xl p-4 space-y-2 shadow-xs">
-                                <h4 className="text-xs font-bold text-strong-blue tracking-wide border-b border-zinc-200 pb-2">DISTRIBUSI NILAI</h4>
+                              <div className="bg-white border border-zinc-200 rounded-xl p-3 space-y-1 shadow-2xs print-chart-card overflow-hidden">
+                                <h4 className="text-[11px] font-bold text-strong-blue tracking-wide border-b border-zinc-200 pb-1.5 uppercase">DISTRIBUSI NILAI</h4>
                                 {studentGrades.length > 0 ? (
                                   <ReactApexChart 
                                     options={donutChartOptions} 
                                     series={donutChartSeries} 
                                     type="donut" 
-                                    height={240} 
+                                    height={190} 
                                   />
                                 ) : (
-                                  <div className="h-[240px] flex items-center justify-center text-[10px] text-zinc-500 font-medium">Belum ada nilai</div>
+                                  <div className="h-[190px] flex items-center justify-center text-[10px] text-zinc-500 font-medium">Belum ada nilai</div>
                                 )}
                               </div>
                             </div>
@@ -2505,29 +2532,29 @@ export default function SiswaPage() {
                         </div>
 
                         {/* Footer Halaman 1 */}
-                        <div className="pt-4 border-t border-zinc-200 print-border flex justify-between items-center text-[10px] text-zinc-400 print-text-muted font-bold uppercase tracking-wider">
+                        <div className="pt-3 border-t border-zinc-200 print-border flex justify-between items-center text-[9px] text-zinc-400 print-text-muted font-bold uppercase tracking-wider">
                           <span>RAPOR HASIL BELAJAR SISWA • SG CABANG NUSANTARA</span>
                           <span>Halaman 1 dari 2</span>
                         </div>
                       </div>
 
                       {/* HALAMAN 2 */}
-                      <div className="bg-white border border-zinc-200 rounded-xl p-8 space-y-8 shadow-2xl text-zinc-800 relative min-h-[1050px] flex flex-col justify-between mt-8">
-                        <div className="space-y-8">
+                      <div className="bg-white border border-zinc-200 rounded-xl p-5 sm:p-6 space-y-4 shadow-2xl text-zinc-800 relative min-h-[960px] flex flex-col justify-between mt-8 print-avoid-break">
+                        <div className="space-y-4">
                           {/* Running Header Halaman 2 */}
-                          <div className="flex justify-between items-center border-b-2 print-border pb-3">
-                            <div className="flex items-center gap-3">
-                              <div className="px-2.5 py-1 bg-mustard rounded-lg text-strong-blue font-black text-sm flex items-center justify-center leading-none shadow-xs">
+                          <div className="flex justify-between items-center border-b-2 print-border pb-2.5">
+                            <div className="flex items-center gap-2.5">
+                              <div className="px-2 py-0.5 bg-mustard rounded-lg text-strong-blue font-black text-xs flex items-center justify-center leading-none shadow-xs">
                                 SG
                               </div>
                               <div>
                                 <h2 className="text-xs font-black text-strong-blue print-text tracking-wide leading-none">RAPOR HASIL BELAJAR SISWA</h2>
-                                <span className="text-[10px] text-zinc-500 print-text-muted font-bold">SG Cabang Nusantara</span>
+                                <span className="text-[9px] text-zinc-500 print-text-muted font-bold">SG Cabang Nusantara</span>
                               </div>
                             </div>
                             <div className="text-right">
                               <span className="font-extrabold text-zinc-800 print-text text-xs">{selectedStudent.nama_lengkap}</span>
-                              <span className="text-[10px] text-zinc-500 print-text-muted font-bold block">
+                              <span className="text-[9px] text-zinc-500 print-text-muted font-bold block">
                                 NIS: {selectedStudent.nis} | {selectedStudent.semester} {selectedStudent.tahun_ajaran}
                               </span>
                             </div>
@@ -2535,81 +2562,81 @@ export default function SiswaPage() {
 
                           {/* Detail Nilai & Kehadiran Table */}
                           {loadingDetails ? (
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-pulse bg-white border border-zinc-200 rounded-xl p-6">
-                              <div className="md:col-span-1 space-y-4">
-                                <div className="h-4 bg-zinc-200 rounded w-24" />
-                                <div className="h-32 bg-zinc-50 rounded-xl" />
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-5 animate-pulse bg-white border border-zinc-200 rounded-xl p-4">
+                              <div className="md:col-span-1 space-y-3">
+                                <div className="h-3.5 bg-zinc-200 rounded w-20" />
+                                <div className="h-28 bg-zinc-50 rounded-xl" />
                               </div>
-                              <div className="md:col-span-2 space-y-4">
-                                <div className="h-4 bg-zinc-200 rounded w-24" />
-                                <div className="h-32 bg-zinc-50 rounded-xl" />
+                              <div className="md:col-span-2 space-y-3">
+                                <div className="h-3.5 bg-zinc-200 rounded w-20" />
+                                <div className="h-28 bg-zinc-50 rounded-xl" />
                               </div>
                             </div>
                           ) : (
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                               {/* Kehadiran Details */}
-                              <div className="md:col-span-1 space-y-2">
-                                <h4 className="text-xs font-bold text-strong-blue print-text tracking-wide border-b-2 print-border border-zinc-200 pb-2">KEHADIRAN</h4>
+                              <div className="md:col-span-1 space-y-1.5">
+                                <h4 className="text-[11px] font-bold text-strong-blue print-text tracking-wide border-b-2 print-border border-zinc-200 pb-1 uppercase">KEHADIRAN</h4>
                                 <table className="w-full text-xs text-zinc-600 print-text-muted">
                                   <thead>
                                     <tr className="border-b border-zinc-200 print-border">
-                                      <th className="py-2 text-left">Keterangan</th>
-                                      <th className="py-2 text-right">Jumlah</th>
+                                      <th className="py-1.5 text-left">Keterangan</th>
+                                      <th className="py-1.5 text-right">Jumlah</th>
                                     </tr>
                                   </thead>
                                   <tbody className="divide-y divide-zinc-200 print-border">
                                     <tr>
-                                      <td className="py-2 font-medium text-zinc-800 print-text">Hadir</td>
-                                      <td className="py-2 text-right">{(studentAttendance?.hadir || 0)} Sesi</td>
+                                      <td className="py-1.5 font-medium text-zinc-800 print-text">Hadir</td>
+                                      <td className="py-1.5 text-right font-bold">{(studentAttendance?.hadir || 0)} Sesi</td>
                                     </tr>
                                     <tr>
-                                      <td className="py-2 font-medium text-zinc-800 print-text">Sakit</td>
-                                      <td className="py-2 text-right">{(studentAttendance?.sakit || 0)} Sesi</td>
+                                      <td className="py-1.5 font-medium text-zinc-800 print-text">Sakit</td>
+                                      <td className="py-1.5 text-right font-bold">{(studentAttendance?.sakit || 0)} Sesi</td>
                                     </tr>
                                     <tr>
-                                      <td className="py-2 font-medium text-zinc-800 print-text">Izin</td>
-                                      <td className="py-2 text-right">{(studentAttendance?.izin || 0)} Sesi</td>
+                                      <td className="py-1.5 font-medium text-zinc-800 print-text">Izin</td>
+                                      <td className="py-1.5 text-right font-bold">{(studentAttendance?.izin || 0)} Sesi</td>
                                     </tr>
                                     <tr>
-                                      <td className="py-2 font-medium text-zinc-800 print-text">Alpa (Alpha)</td>
-                                      <td className="py-2 text-right">{(studentAttendance?.alpha || 0)} Sesi</td>
+                                      <td className="py-1.5 font-medium text-zinc-800 print-text">Alpa (Alpha)</td>
+                                      <td className="py-1.5 text-right font-bold">{(studentAttendance?.alpha || 0)} Sesi</td>
                                     </tr>
                                   </tbody>
                                 </table>
                               </div>
 
                               {/* Table of subject details */}
-                              <div className="md:col-span-2 space-y-2">
-                                <h4 className="text-xs font-bold text-strong-blue print-text tracking-wide border-b-2 print-border border-zinc-200 pb-2">DETAIL NILAI</h4>
+                              <div className="md:col-span-2 space-y-1.5">
+                                <h4 className="text-[11px] font-bold text-strong-blue print-text tracking-wide border-b-2 print-border border-zinc-200 pb-1 uppercase">DETAIL NILAI</h4>
                                 <table className="w-full text-xs text-zinc-600 print-text-muted">
                                   <thead>
                                     <tr className="border-b border-zinc-200 print-border">
-                                      <th className="py-2 text-left">Mata Pelajaran</th>
-                                      <th className="py-2 text-left">Materi</th>
-                                      <th className="py-2 text-center w-24">Tentor</th>
-                                      <th className="py-2 text-center w-28">Waktu</th>
-                                      <th className="py-2 text-right w-16">Skor</th>
+                                      <th className="py-1.5 text-left">Mata Pelajaran</th>
+                                      <th className="py-1.5 text-left">Materi</th>
+                                      <th className="py-1.5 text-center w-20">Tentor</th>
+                                      <th className="py-1.5 text-center w-24">Waktu</th>
+                                      <th className="py-1.5 text-right w-14">Skor</th>
                                     </tr>
                                   </thead>
                                   <tbody className="divide-y divide-zinc-200 print-border">
                                     {studentGrades.map((g) => (
                                       <tr key={g.id}>
-                                        <td className="py-2 font-medium text-zinc-800 print-text">
-                                          {g.nama_mapel} <span className="text-[10px] text-zinc-400 font-medium">({g.kategori})</span>
+                                        <td className="py-1.5 font-medium text-zinc-800 print-text">
+                                          {g.nama_mapel} <span className="text-[9px] text-zinc-400 font-medium">({g.kategori})</span>
                                         </td>
-                                        <td className="py-2 italic text-zinc-500">{g.materi || "-"}</td>
-                                        <td className="py-2 text-center text-zinc-500 font-mono">{g.kode_tentor || "-"}</td>
-                                        <td className="py-2 text-center text-zinc-500 font-mono">
+                                        <td className="py-1.5 italic text-zinc-500 line-clamp-1">{g.materi || "-"}</td>
+                                        <td className="py-1.5 text-center text-zinc-500 font-mono text-[11px]">{g.kode_tentor || "-"}</td>
+                                        <td className="py-1.5 text-center text-zinc-500 font-mono text-[10px]">
                                           {g.tanggal_pembelajaran
                                             ? `${new Date(g.tanggal_pembelajaran).toLocaleDateString("id-ID", { day: '2-digit', month: 'short', year: 'numeric' })}${g.jam ? `, ${g.jam}` : ""}`
                                             : "-"}
                                         </td>
-                                        <td className="py-2 text-right font-bold text-strong-blue print-text">{g.skor}</td>
+                                        <td className="py-1.5 text-right font-bold text-strong-blue print-text">{g.skor}</td>
                                       </tr>
                                     ))}
                                     {studentGrades.length === 0 && (
                                       <tr>
-                                        <td colSpan={5} className="py-4 text-center text-zinc-500 italic">Belum ada nilai terinput.</td>
+                                        <td colSpan={5} className="py-3 text-center text-zinc-500 italic">Belum ada nilai terinput.</td>
                                       </tr>
                                     )}
                                   </tbody>
@@ -2620,18 +2647,18 @@ export default function SiswaPage() {
 
                           {/* Catatan Guru */}
                           {loadingDetails ? (
-                            <div className="bg-zinc-50 border border-zinc-200 rounded-xl p-5 space-y-3 animate-pulse">
-                              <div className="h-4 bg-zinc-200 rounded w-32" />
-                              <div className="h-3 bg-zinc-200 rounded w-full" />
-                              <div className="h-3 bg-zinc-200 rounded w-2/3" />
+                            <div className="bg-zinc-50 border border-zinc-200 rounded-xl p-4 space-y-2 animate-pulse">
+                              <div className="h-3.5 bg-zinc-200 rounded w-28" />
+                              <div className="h-2.5 bg-zinc-200 rounded w-full" />
+                              <div className="h-2.5 bg-zinc-200 rounded w-2/3" />
                             </div>
                           ) : (
-                            <div className="bg-zinc-50 border border-zinc-200 print-card rounded-xl p-5 space-y-2">
-                              <h4 className="text-xs font-bold text-strong-blue print-text tracking-wide border-b border-zinc-200 print-border pb-2">CATATAN WALI KELAS</h4>
+                            <div className="bg-zinc-50 border border-zinc-200 print-card rounded-xl p-4 space-y-1.5">
+                              <h4 className="text-[11px] font-bold text-strong-blue print-text tracking-wide border-b border-zinc-200 print-border pb-1 uppercase">CATATAN WALI KELAS</h4>
                               <p className="text-xs text-zinc-700 print-text leading-relaxed italic">
                                 "{studentNote?.catatan}"
                               </p>
-                              <div className="text-right text-[10px] text-zinc-500 print-text-muted font-bold mt-2">
+                              <div className="text-right text-[9px] text-zinc-500 print-text-muted font-bold mt-1">
                                 Nama Guru: {studentNote?.nama_guru}
                               </div>
                             </div>
@@ -2639,30 +2666,30 @@ export default function SiswaPage() {
                         </div>
 
                         {/* Signatures block (di bagian paling bawah Halaman 2) */}
-                        <div className="space-y-6 pt-6">
-                          <div className="grid grid-cols-2 gap-8 text-center text-xs pt-8 border-t border-zinc-200 print-border print-avoid-break">
-                            <div className="space-y-12">
+                        <div className="space-y-4 pt-4">
+                          <div className="grid grid-cols-2 gap-8 text-center text-xs pt-6 border-t border-zinc-200 print-border print-avoid-break">
+                            <div className="space-y-10">
                               <div>
                                 <p className="text-zinc-500 print-text-muted">Dibuat Oleh,</p>
-                                <p className="text-zinc-800 print-text font-bold mt-1">Staf Akademik</p>
+                                <p className="text-zinc-800 print-text font-bold mt-0.5">Staf Akademik</p>
                               </div>
-                              <p className="text-zinc-600 print-text font-semibold border-b border-dashed border-zinc-400 print-border w-48 mx-auto pb-1">
+                              <p className="text-zinc-600 print-text font-semibold border-b border-dashed border-zinc-400 print-border w-44 mx-auto pb-0.5">
                                 {studentNote?.nama_guru || "Prof. Dr. Dora The Explorer"}
                               </p>
                             </div>
-                            <div className="space-y-12">
+                            <div className="space-y-10">
                               <div>
                                 <p className="text-zinc-500 print-text-muted">Mengetahui,</p>
-                                <p className="text-zinc-800 print-text font-bold mt-1">Pimpinan Cabang</p>
+                                <p className="text-zinc-800 print-text font-bold mt-0.5">Pimpinan Cabang</p>
                               </div>
-                              <p className="text-zinc-600 print-text font-semibold border-b border-dashed border-zinc-400 print-border w-48 mx-auto pb-1">
+                              <p className="text-zinc-600 print-text font-semibold border-b border-dashed border-zinc-400 print-border w-44 mx-auto pb-0.5">
                                 Dr. Boots M.Pd
                               </p>
                             </div>
                           </div>
 
                           {/* Footer Halaman 2 */}
-                          <div className="pt-4 border-t border-zinc-200 print-border flex justify-between items-center text-[10px] text-zinc-400 print-text-muted font-bold uppercase tracking-wider">
+                          <div className="pt-3 border-t border-zinc-200 print-border flex justify-between items-center text-[9px] text-zinc-400 print-text-muted font-bold uppercase tracking-wider">
                             <span>RAPOR HASIL BELAJAR SISWA • SG CABANG NUSANTARA</span>
                             <span>Halaman 2 dari 2</span>
                           </div>
@@ -2670,8 +2697,8 @@ export default function SiswaPage() {
                       </div>
                     </>
                   ) : (
-                    /* MODE LONG IMAGE: Format Tunggal Memanjang Bersambung */
-                    <div className="bg-white border border-zinc-200 rounded-xl p-8 space-y-8 shadow-2xl text-zinc-800">
+                    /* MODE LONG IMAGE: Format Tunggal Memanjang (Direct PNG Download target via longReportRef) */
+                    <div ref={longReportRef} className="bg-white border border-zinc-200 rounded-xl p-8 space-y-8 shadow-2xl text-zinc-800">
                       {/* Header Rapor */}
                       <div className="flex justify-between items-center border-b-2 print-border pb-4">
                         <div className="flex items-center gap-3">
@@ -2799,46 +2826,46 @@ export default function SiswaPage() {
                           ))}
                         </div>
                       ) : (
-                        <div className="grid grid-cols-1 gap-6 print-grid">
-                          <div className="bg-white border border-zinc-200 rounded-xl p-4 space-y-2 shadow-xs">
-                            <h4 className="text-xs font-bold text-strong-blue tracking-wide border-b border-zinc-200 pb-2">NILAI SETIAP MAPEL</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 print-grid">
+                          <div className="bg-white border border-zinc-200 rounded-xl p-4 space-y-2 shadow-xs print-chart-card overflow-hidden">
+                            <h4 className="text-xs font-bold text-strong-blue tracking-wide border-b border-zinc-200 pb-2 uppercase">NILAI SETIAP MAPEL</h4>
                             {studentGrades.length > 0 ? (
                               <ReactApexChart 
                                 options={barChartOptions} 
                                 series={barChartSeries} 
                                 type="bar" 
-                                height={dynamicBarHeight} 
+                                height={190} 
                               />
                             ) : (
-                              <div className="h-[240px] flex items-center justify-center text-[10px] text-zinc-500 font-medium">Belum ada nilai</div>
+                              <div className="h-[190px] flex items-center justify-center text-[10px] text-zinc-500 font-medium">Belum ada nilai</div>
                             )}
                           </div>
 
-                          <div className="bg-white border border-zinc-200 rounded-xl p-4 space-y-2 shadow-xs">
-                            <h4 className="text-xs font-bold text-strong-blue tracking-wide border-b border-zinc-200 pb-2">GRAFIK KEMAMPUAN (RADAR)</h4>
+                          <div className="bg-white border border-zinc-200 rounded-xl p-4 space-y-2 shadow-xs print-chart-card overflow-hidden">
+                            <h4 className="text-xs font-bold text-strong-blue tracking-wide border-b border-zinc-200 pb-2 uppercase">GRAFIK KEMAMPUAN</h4>
                             {studentGrades.length > 0 ? (
                               <ReactApexChart 
                                 options={radarChartOptions} 
                                 series={radarChartSeries} 
                                 type="radar" 
-                                height={240} 
+                                height={190} 
                               />
                             ) : (
-                              <div className="h-[240px] flex items-center justify-center text-[10px] text-zinc-500 font-medium">Belum ada nilai</div>
+                              <div className="h-[190px] flex items-center justify-center text-[10px] text-zinc-500 font-medium">Belum ada nilai</div>
                             )}
                           </div>
 
-                          <div className="bg-white border border-zinc-200 rounded-xl p-4 space-y-2 shadow-xs">
-                            <h4 className="text-xs font-bold text-strong-blue tracking-wide border-b border-zinc-200 pb-2">DISTRIBUSI NILAI</h4>
+                          <div className="bg-white border border-zinc-200 rounded-xl p-4 space-y-2 shadow-xs print-chart-card overflow-hidden">
+                            <h4 className="text-xs font-bold text-strong-blue tracking-wide border-b border-zinc-200 pb-2 uppercase">DISTRIBUSI NILAI</h4>
                             {studentGrades.length > 0 ? (
                               <ReactApexChart 
                                 options={donutChartOptions} 
                                 series={donutChartSeries} 
                                 type="donut" 
-                                height={240} 
+                                height={190} 
                               />
                             ) : (
-                              <div className="h-[240px] flex items-center justify-center text-[10px] text-zinc-500 font-medium">Belum ada nilai</div>
+                              <div className="h-[190px] flex items-center justify-center text-[10px] text-zinc-500 font-medium">Belum ada nilai</div>
                             )}
                           </div>
                         </div>
@@ -2859,7 +2886,7 @@ export default function SiswaPage() {
                       ) : (
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                           <div className="md:col-span-1 space-y-2">
-                            <h4 className="text-xs font-bold text-strong-blue print-text tracking-wide border-b-2 print-border border-zinc-200 pb-2">KEHADIRAN</h4>
+                            <h4 className="text-xs font-bold text-strong-blue print-text tracking-wide border-b-2 print-border border-zinc-200 pb-2 uppercase">KEHADIRAN</h4>
                             <table className="w-full text-xs text-zinc-600 print-text-muted">
                               <thead>
                                 <tr className="border-b border-zinc-200 print-border">
@@ -2870,26 +2897,26 @@ export default function SiswaPage() {
                               <tbody className="divide-y divide-zinc-200 print-border">
                                 <tr>
                                   <td className="py-2 font-medium text-zinc-800 print-text">Hadir</td>
-                                  <td className="py-2 text-right">{(studentAttendance?.hadir || 0)} Sesi</td>
+                                  <td className="py-2 text-right font-bold">{(studentAttendance?.hadir || 0)} Sesi</td>
                                 </tr>
                                 <tr>
                                   <td className="py-2 font-medium text-zinc-800 print-text">Sakit</td>
-                                  <td className="py-2 text-right">{(studentAttendance?.sakit || 0)} Sesi</td>
+                                  <td className="py-2 text-right font-bold">{(studentAttendance?.sakit || 0)} Sesi</td>
                                 </tr>
                                 <tr>
                                   <td className="py-2 font-medium text-zinc-800 print-text">Izin</td>
-                                  <td className="py-2 text-right">{(studentAttendance?.izin || 0)} Sesi</td>
+                                  <td className="py-2 text-right font-bold">{(studentAttendance?.izin || 0)} Sesi</td>
                                 </tr>
                                 <tr>
                                   <td className="py-2 font-medium text-zinc-800 print-text">Alpa (Alpha)</td>
-                                  <td className="py-2 text-right">{(studentAttendance?.alpha || 0)} Sesi</td>
+                                  <td className="py-2 text-right font-bold">{(studentAttendance?.alpha || 0)} Sesi</td>
                                 </tr>
                               </tbody>
                             </table>
                           </div>
 
                           <div className="md:col-span-2 space-y-2">
-                            <h4 className="text-xs font-bold text-strong-blue print-text tracking-wide border-b-2 print-border border-zinc-200 pb-2">DETAIL NILAI</h4>
+                            <h4 className="text-xs font-bold text-strong-blue print-text tracking-wide border-b-2 print-border border-zinc-200 pb-2 uppercase">DETAIL NILAI</h4>
                             <table className="w-full text-xs text-zinc-600 print-text-muted">
                               <thead>
                                 <tr className="border-b border-zinc-200 print-border">
@@ -2906,9 +2933,9 @@ export default function SiswaPage() {
                                     <td className="py-2 font-medium text-zinc-800 print-text">
                                       {g.nama_mapel} <span className="text-[10px] text-zinc-400 font-medium">({g.kategori})</span>
                                     </td>
-                                    <td className="py-2 italic text-zinc-500">{g.materi || "-"}</td>
-                                    <td className="py-2 text-center text-zinc-500 font-mono">{g.kode_tentor || "-"}</td>
-                                    <td className="py-2 text-center text-zinc-500 font-mono">
+                                    <td className="py-2 italic text-zinc-500 line-clamp-1">{g.materi || "-"}</td>
+                                    <td className="py-2 text-center text-zinc-500 font-mono text-[11px]">{g.kode_tentor || "-"}</td>
+                                    <td className="py-2 text-center text-zinc-500 font-mono text-[10px]">
                                       {g.tanggal_pembelajaran
                                         ? `${new Date(g.tanggal_pembelajaran).toLocaleDateString("id-ID", { day: '2-digit', month: 'short', year: 'numeric' })}${g.jam ? `, ${g.jam}` : ""}`
                                         : "-"}
@@ -2936,7 +2963,7 @@ export default function SiswaPage() {
                         </div>
                       ) : (
                         <div className="bg-zinc-50 border border-zinc-200 print-card rounded-xl p-5 space-y-2">
-                          <h4 className="text-xs font-bold text-strong-blue print-text tracking-wide border-b border-zinc-200 print-border pb-2">CATATAN WALI KELAS</h4>
+                          <h4 className="text-xs font-bold text-strong-blue print-text tracking-wide border-b border-zinc-200 print-border pb-2 uppercase">CATATAN WALI KELAS</h4>
                           <p className="text-xs text-zinc-700 print-text leading-relaxed italic">
                             "{studentNote?.catatan}"
                           </p>
