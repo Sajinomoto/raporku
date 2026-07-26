@@ -1165,22 +1165,39 @@ export default function SiswaPage() {
 
   const handleDownloadLongImage = async () => {
     setIsPrintDropdownOpen(false);
+    setActiveTab("rapor");
     setPreviewMode("long");
     setIsDownloadingImage(true);
 
     setTimeout(async () => {
-      if (!longReportRef.current) {
+      const el = longReportRef.current;
+      if (!el) {
         setIsDownloadingImage(false);
         return;
       }
 
       try {
-        const dataUrl = await toPng(longReportRef.current, {
+        const width = el.scrollWidth || el.offsetWidth || 800;
+        const height = el.scrollHeight || el.offsetHeight || 1200;
+
+        const dataUrl = await toPng(el, {
+          width,
+          height,
           quality: 0.95,
           pixelRatio: 2,
           backgroundColor: "#ffffff",
-          cacheBust: true,
+          skipFonts: true,
+          cacheBust: false,
+          style: {
+            display: "block",
+            visibility: "visible",
+            transform: "none",
+          },
         });
+
+        if (!dataUrl || dataUrl.length < 500) {
+          throw new Error("Generated PNG image is empty");
+        }
 
         const link = document.createElement("a");
         const cleanName = selectedStudent?.nama_lengkap
@@ -1196,7 +1213,7 @@ export default function SiswaPage() {
       } finally {
         setIsDownloadingImage(false);
       }
-    }, 300);
+    }, 450);
   };
 
   // Filter students
