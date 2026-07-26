@@ -1317,7 +1317,7 @@ export default function SiswaPage() {
       categories: hasAggregated 
         ? aggregatedGrades.map(g => cleanSubjectName(g.nama_mapel))
         : studentGrades.map(g => cleanSubjectName(g.nama_mapel)),
-      max: 105,
+      max: 110,
       labels: {
         style: {
           fontWeight: 600,
@@ -1337,7 +1337,7 @@ export default function SiswaPage() {
     },
     grid: {
       borderColor: "#e2e8f0",
-      padding: { top: 0, right: 30, bottom: 0, left: 5 },
+      padding: { top: 0, right: 35, bottom: 0, left: 5 },
       xaxis: { lines: { show: true } }
     }
   };
@@ -1361,7 +1361,7 @@ export default function SiswaPage() {
     },
     plotOptions: {
       radar: {
-        size: 55,
+        size: 58,
         polygons: {
           strokeColors: "#e2e8f0",
           connectorColors: "#e2e8f0",
@@ -1397,7 +1397,8 @@ export default function SiswaPage() {
       show: false
     },
     grid: {
-      borderColor: "#e2e8f0"
+      borderColor: "#e2e8f0",
+      padding: { top: 5, right: 10, bottom: 20, left: 10 }
     }
   };
 
@@ -1454,6 +1455,9 @@ export default function SiswaPage() {
     stroke: {
       colors: ["#ffffff"],
       width: 2
+    },
+    grid: {
+      padding: { top: 5, right: 15, bottom: 15, left: 10 }
     },
     plotOptions: {
       pie: {
@@ -2405,7 +2409,7 @@ export default function SiswaPage() {
                     /* MODE A4: Multi-Halaman Fisik A4 Terpisah (Strictly 2 Halaman) */
                     <>
                       {/* HALAMAN 1 */}
-                      <div className="bg-white border border-zinc-200 rounded-xl p-5 sm:p-6 space-y-4 shadow-2xl text-zinc-800 relative min-h-[960px] flex flex-col justify-between print-page-break print-avoid-break">
+                      <div className="bg-white border border-zinc-200 print:border-none rounded-lg print:rounded-none p-6 space-y-4 shadow-sm print:shadow-none text-zinc-800 relative min-h-[960px] flex flex-col justify-between print-page-break print-avoid-break">
                         <div className="space-y-4">
                           {/* Kop Header Rapor */}
                           <div className="flex justify-between items-center border-b-2 print-border pb-3">
@@ -2600,7 +2604,7 @@ export default function SiswaPage() {
                       </div>
 
                       {/* HALAMAN 2 */}
-                      <div className="bg-white border border-zinc-200 rounded-xl p-5 sm:p-6 space-y-4 shadow-2xl text-zinc-800 relative min-h-[960px] flex flex-col justify-between mt-8 print-avoid-break">
+                      <div className="bg-white border border-zinc-200 print:border-none rounded-lg print:rounded-none p-6 space-y-4 shadow-sm print:shadow-none text-zinc-800 relative min-h-[960px] flex flex-col justify-between mt-8 print-avoid-break">
                         <div className="space-y-4">
                           {/* Running Header Halaman 2 */}
                           <div className="flex justify-between items-center border-b-2 print-border pb-2.5">
