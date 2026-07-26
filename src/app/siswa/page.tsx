@@ -1477,6 +1477,7 @@ export default function SiswaPage() {
           .print-page-break {
             page-break-after: always !important;
             break-after: page !important;
+            margin-bottom: 0 !important;
           }
 
           .print-avoid-break {
@@ -2249,7 +2250,7 @@ export default function SiswaPage() {
                   {/* MODE A4: Multi-Halaman Fisik A4 Terpisah (Strictly 2 Halaman) */}
                     <>
                       {/* HALAMAN 1 */}
-                      <div className="bg-white border border-zinc-200 print:border-none rounded-lg print:rounded-none p-6 space-y-4 shadow-sm print:shadow-none text-zinc-800 relative min-h-[960px] flex flex-col justify-between print-page-break print-avoid-break">
+                      <div className="bg-white border border-zinc-200 print:border-none rounded-lg print:rounded-none p-6 print:p-0 space-y-4 print:space-y-2.5 shadow-sm print:shadow-none text-zinc-800 relative min-h-[960px] print:min-h-0 print:h-auto flex flex-col justify-between print-page-break">
                         <div className="space-y-4">
                           {/* Kop Header Rapor */}
                           <div className="flex justify-between items-center border-b-2 print-border pb-3">
@@ -2516,7 +2517,7 @@ export default function SiswaPage() {
                       </div>
 
                       {/* HALAMAN 2 */}
-                      <div className="bg-white border border-zinc-200 print:border-none rounded-lg print:rounded-none p-6 space-y-4 shadow-sm print:shadow-none text-zinc-800 relative min-h-[960px] flex flex-col justify-between mt-8 print-avoid-break">
+                      <div className="bg-white border border-zinc-200 print:border-none rounded-lg print:rounded-none p-6 print:p-0 space-y-4 print:space-y-2.5 shadow-sm print:shadow-none text-zinc-800 relative min-h-[960px] print:min-h-0 print:h-auto flex flex-col justify-between mt-8 print:mt-0 print-avoid-break">
                         <div className="space-y-4">
                           {/* Running Header Halaman 2 */}
                           <div className="flex justify-between items-center border-b-2 print-border pb-2.5">
