@@ -149,9 +149,62 @@ export default function ClassDetailPage({ params }: { params: Promise<{ id: stri
   const [targetClassId, setTargetClassId] = useState<string>("");
   const [confirmGraduateStudent, setConfirmGraduateStudent] = useState<Siswa | null>(null);
 
+  // Add Student Modal states (Request 1)
+  const [showAddStudentModal, setShowAddStudentModal] = useState(false);
+  const [assignableStudents, setAssignableStudents] = useState<any[]>([]);
+  const [selectedStudentIdsToAdd, setSelectedStudentIdsToAdd] = useState<string[]>([]);
+  const [addStudentSearchQuery, setAddStudentSearchQuery] = useState("");
+  const [addStudentSaving, setAddStudentSaving] = useState(false);
+
   // Statistics states
   const [classAverage, setClassAverage] = useState<number>(0);
   const [classAttendance, setClassAttendance] = useState<number>(0);
+
+  const openAddStudentModal = async () => {
+    setAddStudentSearchQuery("");
+    setSelectedStudentIdsToAdd([]);
+    setShowAddStudentModal(true);
+    try {
+      const { data, error } = await supabase
+        .from("siswa")
+        .select(`
+          id,
+          nama_lengkap,
+          nis,
+          kelas_id,
+          foto_url,
+          kelas:kelas_id(id, nama_kelas, tahun_ajaran)
+        `)
+        .order("nama_lengkap");
+
+      if (error) throw error;
+      const available = (data || []).filter((s: any) => s.kelas_id !== classId);
+      setAssignableStudents(available);
+    } catch (err) {
+      console.error("Error fetching assignable students:", err);
+    }
+  };
+
+  const handleExecuteAddStudents = async () => {
+    if (selectedStudentIdsToAdd.length === 0) return;
+    setAddStudentSaving(true);
+    try {
+      const { error } = await supabase
+        .from("siswa")
+        .update({ kelas_id: classId })
+        .in("id", selectedStudentIdsToAdd);
+
+      if (error) throw error;
+      setShowAddStudentModal(false);
+      setSelectedStudentIdsToAdd([]);
+      fetchClassDetails();
+    } catch (err) {
+      console.error("Error adding students to class:", err);
+      alert("Gagal menambahkan siswa ke kelas: " + (err instanceof Error ? err.message : "Error tidak diketahui"));
+    } finally {
+      setAddStudentSaving(false);
+    }
+  };
 
   useEffect(() => {
     if (classId) {
@@ -193,6 +246,14 @@ export default function ClassDetailPage({ params }: { params: Promise<{ id: stri
       if (nextInput) {
         (nextInput as HTMLInputElement).focus();
         (nextInput as HTMLInputElement).select();
+      } else if (prefix === 'grade-skor') {
+        addAcademicRow();
+        setTimeout(() => {
+          const newSkorInput = document.getElementById(`grade-skor-${currentIndex + 1}`);
+          if (newSkorInput) {
+            (newSkorInput as HTMLInputElement).focus();
+          }
+        }, 50);
       }
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
@@ -544,12 +605,41 @@ export default function ClassDetailPage({ params }: { params: Promise<{ id: stri
 
       // 2. Insert or Update remaining rows
       for (const row of academicGrades.rows) {
-        if (!row.mapel_id && row.skor === "" && !row.materi && !row.kode_tentor && !row.jam) {
+        if (!row.mapel_id && !row.nama_mapel.trim() && row.skor === "" && !row.materi && !row.kode_tentor && !row.jam) {
           continue;
         }
 
-        if (!row.mapel_id) {
-          throw new Error("Mata pelajaran harus dipilih untuk setiap baris yang diisi.");
+        let mapelIdToUse = row.mapel_id;
+
+        // Auto-resolve or auto-create mapel if typed directly
+        if (!mapelIdToUse && row.nama_mapel.trim()) {
+          const matchedSubject = subjects.find(
+            s => s.nama_mapel.toLowerCase() === row.nama_mapel.trim().toLowerCase()
+          );
+
+          if (matchedSubject) {
+            mapelIdToUse = matchedSubject.id;
+          } else {
+            const { data: newSubject, error: createSubErr } = await supabase
+              .from("mata_pelajaran")
+              .insert({
+                nama_mapel: row.nama_mapel.trim(),
+                kategori: row.kategori || "Wajib",
+                jenjang: kelas?.jenjang || "SD"
+              })
+              .select()
+              .single();
+
+            if (createSubErr) {
+              throw new Error(`Gagal membuat mata pelajaran "${row.nama_mapel}": ${createSubErr.message}`);
+            }
+            mapelIdToUse = newSubject.id;
+            setSubjects(prev => [...prev, newSubject]);
+          }
+        }
+
+        if (!mapelIdToUse) {
+          throw new Error("Mata pelajaran harus diisi untuk setiap baris yang memiliki nilai/materi.");
         }
 
         if (row.skor !== "" && (Number(row.skor) < 0 || Number(row.skor) > 100)) {
@@ -558,7 +648,7 @@ export default function ClassDetailPage({ params }: { params: Promise<{ id: stri
 
         const payload = {
           siswa_id: modalStudent.id,
-          mapel_id: row.mapel_id,
+          mapel_id: mapelIdToUse,
           skor: row.skor !== "" ? Number(row.skor) : null,
           materi: row.materi || null,
           kode_tentor: row.kode_tentor || null,
@@ -1060,9 +1150,18 @@ export default function ClassDetailPage({ params }: { params: Promise<{ id: stri
           {/* Bottom Row: Student List (Full Width) */}
           <div className="bg-white border border-zinc-200 rounded-xl p-6 space-y-4 shadow-xs">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-zinc-100 pb-3">
-              <h4 className="font-extrabold text-strong-blue text-sm flex items-center gap-2">
-                <Users size={16} /> Anggota Kelas
-              </h4>
+              <div className="flex items-center gap-3">
+                <h4 className="font-extrabold text-strong-blue text-sm flex items-center gap-2">
+                  <Users size={16} /> Anggota Kelas ({students.length})
+                </h4>
+                <button
+                  type="button"
+                  onClick={openAddStudentModal}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-strong-blue hover:bg-[#001D6E] text-white font-bold rounded-lg text-xs transition-all hover:-translate-y-0.5 active:scale-95 shadow-xs cursor-pointer"
+                >
+                  <UserPlus size={14} /> Masukkan Siswa
+                </button>
+              </div>
               <div className="relative w-full sm:w-64">
                 <Search className="absolute left-3 top-2.5 text-zinc-400" size={14} />
                 <input
@@ -1466,18 +1565,31 @@ export default function ClassDetailPage({ params }: { params: Promise<{ id: stri
 
                               {/* Mata Pelajaran column */}
                               <td className="px-4 py-2">
-                                <button
-                                  type="button"
-                                  onClick={() => openSubjectSelector(idx)}
-                                  className="w-full text-left bg-zinc-50 hover:bg-zinc-100 border border-zinc-200 focus:border-strong-blue rounded-lg px-2.5 py-1.5 text-xs text-zinc-800 font-semibold transition-colors flex items-center justify-between cursor-pointer"
-                                >
-                                  <span className="truncate max-w-[180px]">
-                                    {row.nama_mapel
-                                      ? `${row.nama_mapel} (${row.kategori})`
-                                      : "Pilih Mapel..."}
-                                  </span>
-                                  <Search size={12} className="text-zinc-400" />
-                                </button>
+                                <input
+                                  id={`grade-mapel-${idx}`}
+                                  type="text"
+                                  list="subjects-datalist-kelas"
+                                  placeholder="Ketik / Pilih Mapel..."
+                                  value={row.nama_mapel}
+                                  onChange={(e) => {
+                                    const typedVal = e.target.value;
+                                    const matched = subjects.find(
+                                      (s) => s.nama_mapel.toLowerCase() === typedVal.toLowerCase()
+                                    );
+                                    setAcademicGrades(prev => {
+                                      const currentRows = [...prev.rows];
+                                      currentRows[idx] = {
+                                        ...currentRows[idx],
+                                        nama_mapel: typedVal,
+                                        mapel_id: matched ? matched.id : "",
+                                        kategori: matched ? matched.kategori : (currentRows[idx].kategori || "Wajib")
+                                      };
+                                      return { rows: currentRows };
+                                    });
+                                  }}
+                                  onKeyDown={(e) => handleKeyDown(e, 'grade-mapel', idx)}
+                                  className="w-full bg-zinc-50 focus:bg-white border border-zinc-200 focus:border-strong-blue rounded-lg px-2.5 py-1.5 text-xs text-zinc-900 focus:outline-none transition-colors font-semibold focus:ring-1 focus:ring-strong-blue"
+                                />
                               </td>
 
                               {/* Materi Pembelajaran column */}
@@ -2507,6 +2619,180 @@ export default function ClassDetailPage({ params }: { params: Promise<{ id: stri
               >
                 Ya, Luluskan
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* HTML Datalist for Subject Auto-complete (Request 2) */}
+      <datalist id="subjects-datalist-kelas">
+        {subjects.map((subj) => (
+          <option key={subj.id} value={subj.nama_mapel}>
+            {subj.nama_mapel} ({subj.kategori})
+          </option>
+        ))}
+      </datalist>
+
+      {/* Modal Masukkan Siswa ke Kelas (Request 1) */}
+      {showAddStudentModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+          <div className="bg-white border border-zinc-200 rounded-xl w-full max-w-xl shadow-2xl overflow-hidden animate-scale-up flex flex-col max-h-[85vh]">
+            <div className="p-5 border-b border-zinc-200 bg-zinc-50 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <UserPlus className="text-strong-blue" size={20} />
+                <div>
+                  <h3 className="font-extrabold text-zinc-900 text-sm">Masukkan Siswa ke Kelas</h3>
+                  <p className="text-xs text-zinc-500 font-medium">Pilih siswa yang ingin didaftarkan ke kelas <span className="font-bold text-strong-blue">{kelas.nama_kelas}</span></p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowAddStudentModal(false)}
+                className="p-1 text-zinc-400 hover:text-zinc-600 rounded-lg hover:bg-zinc-200 cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="p-4 border-b border-zinc-200 bg-white space-y-3">
+              <div className="relative">
+                <Search className="absolute left-3 top-2.5 text-zinc-400" size={14} />
+                <input
+                  type="text"
+                  placeholder="Cari nama atau NIS siswa..."
+                  value={addStudentSearchQuery}
+                  onChange={(e) => setAddStudentSearchQuery(e.target.value)}
+                  className="w-full pl-9 pr-8 py-2 bg-zinc-50 border border-zinc-200 focus:border-strong-blue focus:bg-white rounded-lg text-xs text-zinc-900 focus:outline-none transition-colors"
+                />
+                {addStudentSearchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setAddStudentSearchQuery("")}
+                    className="absolute right-3 top-2.5 text-zinc-400 hover:text-zinc-600 cursor-pointer"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+
+              {/* Multi-select bar */}
+              <div className="flex justify-between items-center text-xs font-semibold text-zinc-600 px-1">
+                <span>Terpilih: <strong className="text-strong-blue">{selectedStudentIdsToAdd.length} Siswa</strong></span>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const filtered = assignableStudents.filter((s) => {
+                        const q = addStudentSearchQuery.toLowerCase();
+                        return s.nama_lengkap.toLowerCase().includes(q) || s.nis.includes(q);
+                      });
+                      setSelectedStudentIdsToAdd(filtered.map(s => s.id));
+                    }}
+                    className="text-strong-blue hover:underline text-[11px] font-bold cursor-pointer"
+                  >
+                    Pilih Semua
+                  </button>
+                  <span className="text-zinc-300">|</span>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedStudentIdsToAdd([])}
+                    className="text-zinc-400 hover:text-zinc-600 hover:underline text-[11px] font-bold cursor-pointer"
+                  >
+                    Batal Pilih
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* List of Assignable Students */}
+            <div className="flex-1 overflow-y-auto p-4 divide-y divide-zinc-100 space-y-1">
+              {assignableStudents
+                .filter((s) => {
+                  const q = addStudentSearchQuery.toLowerCase();
+                  return s.nama_lengkap.toLowerCase().includes(q) || s.nis.includes(q);
+                })
+                .map((student) => {
+                  const isChecked = selectedStudentIdsToAdd.includes(student.id);
+                  const hasOtherClass = Boolean(student.kelas_id && student.kelas?.nama_kelas);
+                  return (
+                    <label
+                      key={student.id}
+                      className={`flex items-center justify-between p-2.5 rounded-lg cursor-pointer transition-colors ${
+                        isChecked ? "bg-blue-50/70 border border-blue-200" : "hover:bg-zinc-50 border border-transparent"
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedStudentIdsToAdd(prev => [...prev, student.id]);
+                            } else {
+                              setSelectedStudentIdsToAdd(prev => prev.filter(id => id !== student.id));
+                            }
+                          }}
+                          className="w-4 h-4 text-strong-blue rounded border-zinc-300 focus:ring-strong-blue cursor-pointer"
+                        />
+                        <div>
+                          <p className="text-xs font-bold text-zinc-900">{student.nama_lengkap}</p>
+                          <p className="text-[10px] text-zinc-500 font-mono">NIS: {student.nis}</p>
+                        </div>
+                      </div>
+
+                      <div>
+                        {hasOtherClass ? (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
+                            Akan dipindah dari: {student.kelas?.nama_kelas}
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                            Belum Ada Kelas
+                          </span>
+                        )}
+                      </div>
+                    </label>
+                  );
+                })}
+
+              {assignableStudents.filter((s) => {
+                const q = addStudentSearchQuery.toLowerCase();
+                return s.nama_lengkap.toLowerCase().includes(q) || s.nis.includes(q);
+              }).length === 0 && (
+                <div className="py-8 text-center text-xs text-zinc-400 font-medium">
+                  {addStudentSearchQuery ? "Tidak ditemukan siswa yang cocok." : "Semua siswa sudah terdaftar di kelas ini."}
+                </div>
+              )}
+            </div>
+
+            <div className="p-4 bg-zinc-50 border-t border-zinc-200 flex justify-between items-center">
+              <span className="text-xs text-zinc-500 italic">
+                {selectedStudentIdsToAdd.length > 0
+                  ? `Siap memasukkan ${selectedStudentIdsToAdd.length} siswa.`
+                  : "Pilih minimal 1 siswa."}
+              </span>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowAddStudentModal(false)}
+                  className="px-3.5 py-2 hover:bg-zinc-200 text-zinc-600 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  disabled={selectedStudentIdsToAdd.length === 0 || addStudentSaving}
+                  onClick={handleExecuteAddStudents}
+                  className={`px-4 py-2 text-white rounded-lg text-xs font-bold transition-all shadow-md cursor-pointer flex items-center gap-1.5 ${
+                    selectedStudentIdsToAdd.length > 0 && !addStudentSaving
+                      ? "bg-strong-blue hover:bg-[#001D6E]"
+                      : "bg-zinc-300 cursor-not-allowed"
+                  }`}
+                >
+                  <UserPlus size={14} />
+                  {addStudentSaving ? "Menyimpan..." : `Masukkan (${selectedStudentIdsToAdd.length}) Siswa`}
+                </button>
+              </div>
             </div>
           </div>
         </div>

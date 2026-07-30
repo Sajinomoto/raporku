@@ -449,6 +449,14 @@ export default function SiswaPage() {
       if (nextInput) {
         (nextInput as HTMLInputElement).focus();
         (nextInput as HTMLInputElement).select();
+      } else if (prefix === 'grade-skor') {
+        addAcademicRow();
+        setTimeout(() => {
+          const newSkorInput = document.getElementById(`grade-skor-${currentIndex + 1}`);
+          if (newSkorInput) {
+            (newSkorInput as HTMLInputElement).focus();
+          }
+        }, 50);
       }
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
@@ -759,12 +767,41 @@ export default function SiswaPage() {
 
       // 2. Insert or Update remaining rows
       for (const row of academicGrades.rows) {
-        if (!row.mapel_id && row.skor === "" && !row.materi && !row.kode_tentor && !row.jam) {
+        if (!row.mapel_id && !row.nama_mapel.trim() && row.skor === "" && !row.materi && !row.kode_tentor && !row.jam) {
           continue;
         }
 
-        if (!row.mapel_id) {
-          throw new Error("Mata pelajaran harus dipilih untuk setiap baris yang diisi.");
+        let mapelIdToUse = row.mapel_id;
+
+        // Auto-resolve or auto-create mapel if typed directly
+        if (!mapelIdToUse && row.nama_mapel.trim()) {
+          const matchedSubject = subjects.find(
+            s => s.nama_mapel.toLowerCase() === row.nama_mapel.trim().toLowerCase()
+          );
+
+          if (matchedSubject) {
+            mapelIdToUse = matchedSubject.id;
+          } else {
+            const { data: newSubject, error: createSubErr } = await supabase
+              .from("mata_pelajaran")
+              .insert({
+                nama_mapel: row.nama_mapel.trim(),
+                kategori: row.kategori || "Wajib",
+                jenjang: selectedStudent.jenjang || "SD"
+              })
+              .select()
+              .single();
+
+            if (createSubErr) {
+              throw new Error(`Gagal membuat mata pelajaran "${row.nama_mapel}": ${createSubErr.message}`);
+            }
+            mapelIdToUse = newSubject.id;
+            setSubjects(prev => [...prev, newSubject]);
+          }
+        }
+
+        if (!mapelIdToUse) {
+          throw new Error("Mata pelajaran harus diisi untuk setiap baris yang memiliki nilai/materi.");
         }
 
         if (row.skor !== "" && (Number(row.skor) < 0 || Number(row.skor) > 100)) {
@@ -773,7 +810,7 @@ export default function SiswaPage() {
 
         const payload = {
           siswa_id: selectedStudent.id,
-          mapel_id: row.mapel_id,
+          mapel_id: mapelIdToUse,
           skor: row.skor !== "" ? Number(row.skor) : null,
           materi: row.materi || null,
           kode_tentor: row.kode_tentor || null,
@@ -2146,18 +2183,31 @@ export default function SiswaPage() {
 
                                     {/* Mata Pelajaran column */}
                                     <td className="px-4 py-2">
-                                      <button
-                                        type="button"
-                                        onClick={() => openSubjectSelector(idx)}
-                                        className="w-full text-left bg-zinc-50 hover:bg-zinc-100 border border-zinc-200 focus:border-strong-blue rounded-lg px-2.5 py-1.5 text-xs text-zinc-800 font-semibold transition-colors flex items-center justify-between cursor-pointer"
-                                      >
-                                        <span className="truncate max-w-[180px]">
-                                          {row.nama_mapel
-                                            ? `${row.nama_mapel} (${row.kategori})`
-                                            : "Pilih Mapel..."}
-                                        </span>
-                                        <Search size={12} className="text-zinc-400" />
-                                      </button>
+                                      <input
+                                        id={`grade-mapel-${idx}`}
+                                        type="text"
+                                        list="subjects-datalist-siswa"
+                                        placeholder="Ketik / Pilih Mapel..."
+                                        value={row.nama_mapel}
+                                        onChange={(e) => {
+                                          const typedVal = e.target.value;
+                                          const matched = subjects.find(
+                                            (s) => s.nama_mapel.toLowerCase() === typedVal.toLowerCase()
+                                          );
+                                          setAcademicGrades(prev => {
+                                            const currentRows = [...prev.rows];
+                                            currentRows[idx] = {
+                                              ...currentRows[idx],
+                                              nama_mapel: typedVal,
+                                              mapel_id: matched ? matched.id : "",
+                                              kategori: matched ? matched.kategori : (currentRows[idx].kategori || "Wajib")
+                                            };
+                                            return { rows: currentRows };
+                                          });
+                                        }}
+                                        onKeyDown={(e) => handleKeyDown(e, 'grade-mapel', idx)}
+                                        className="w-full bg-zinc-50 focus:bg-white border border-zinc-200 focus:border-strong-blue rounded-lg px-2.5 py-1.5 text-xs text-zinc-900 focus:outline-none transition-colors font-semibold focus:ring-1 focus:ring-strong-blue"
+                                      />
                                     </td>
 
                                     {/* Materi Pembelajaran column */}
@@ -3725,11 +3775,18 @@ export default function SiswaPage() {
               : "bg-red-50 border-red-200 text-red-800"
           }`}>
             {toast.type === "success" ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
-            <span className="text-xs font-extrabold">{toast.text}</span>
           </div>
         </div>
       )}
 
+      {/* HTML Datalist for Subject Auto-complete (Request 2) */}
+      <datalist id="subjects-datalist-siswa">
+        {subjects.map((subj) => (
+          <option key={subj.id} value={subj.nama_mapel}>
+            {subj.nama_mapel} ({subj.kategori})
+          </option>
+        ))}
+      </datalist>
     </div>
   );
 }
