@@ -44,10 +44,13 @@ next-env.d.ts
 details/
 example-folder/
 tasks/
-supabase/
+/supabase/
 tech-stacks.md
 AGENTS.md
 CLAUDE.md
+
+# Security scan artifacts
+/static_analysis_semgrep_*/
 
 # IDEs and editors
 .vscode/
