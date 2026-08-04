@@ -9,6 +9,7 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@supabase/ssr": "^0.12.4",
     "@supabase/supabase-js": "^2.110.3",
     "apexcharts": "^5.16.0",
     "html-to-image": "^1.11.13",
@@ -18,7 +19,7 @@
     "react": "19.2.4",
     "react-apexcharts": "^2.1.1",
     "react-dom": "19.2.4",
-    "xlsx": "^0.18.5"
+    "xlsx": "file:vendor/xlsx-0.20.3.tgz"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
