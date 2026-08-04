@@ -1,4 +1,4 @@
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 import { 
   Users, 
   Layers, 
@@ -19,6 +19,7 @@ export default async function Home() {
   let subjectCount = 0;
 
   try {
+    const supabase = await createClient();
     const [studentsRes, classesRes, subjectsRes] = await Promise.all([
       supabase.from("siswa").select("*", { count: "exact", head: true }),
       supabase.from("kelas").select("*", { count: "exact", head: true }),
