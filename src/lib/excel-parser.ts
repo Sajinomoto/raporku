@@ -114,6 +114,34 @@ function parseNumber(value: any): number | null {
   return null;
 }
 
+const MAX_EXCEL_SIZE = 10 * 1024 * 1024; // 10 MB
+const MAGIC_XLSX = [0x50, 0x4b]; // "PK" — ZIP container (.xlsx)
+const MAGIC_XLS = [0xd0, 0xcf]; // OLE2 container (.xls)
+
+/**
+ * Validate an uploaded Excel file: extension, size, and magic bytes.
+ * Returns an error message, or null if the file is acceptable.
+ * (Magic bytes matter: extension alone can be spoofed.)
+ */
+export async function validateExcelFile(file: File): Promise<string | null> {
+  if (!/\.(xlsx|xls)$/i.test(file.name)) {
+    return "Format berkas tidak valid. Harap pilih berkas Excel (.xlsx atau .xls).";
+  }
+  if (file.size > MAX_EXCEL_SIZE) {
+    return "Ukuran berkas maksimal 10 MB.";
+  }
+  const head = new Uint8Array(await file.slice(0, 2).arrayBuffer());
+  const lowerName = file.name.toLowerCase();
+  const isXlsx =
+    lowerName.endsWith(".xlsx") && MAGIC_XLSX.every((b, i) => head[i] === b);
+  const isXls =
+    lowerName.endsWith(".xls") && MAGIC_XLS.every((b, i) => head[i] === b);
+  if (!isXlsx && !isXls) {
+    return "Berkas bukan file Excel yang valid.";
+  }
+  return null;
+}
+
 /**
  * Parse an uploaded Excel file and extract grade data
  */

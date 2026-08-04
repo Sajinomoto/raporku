@@ -3,7 +3,7 @@
 import { use, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { parseGradeExcel, validateAndMapRows, bulkInsertGrades, downloadTemplate, type ExcelGradeRow } from "@/lib/excel-parser";
+import { parseGradeExcel, validateAndMapRows, bulkInsertGrades, downloadTemplate, validateExcelFile, type ExcelGradeRow } from "@/lib/excel-parser";
 import { 
   Layers, 
   Plus, 
@@ -290,26 +290,30 @@ export default function ClassDetailPage({ params }: { params: Promise<{ id: stri
     setIsDraggingExcel(false);
   };
 
-  const handleExcelDrop = (e: React.DragEvent) => {
+  const handleExcelDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     setIsDraggingExcel(false);
     const files = e.dataTransfer.files;
     if (files && files.length > 0) {
-      const file = files[0];
-      if (file.name.endsWith(".xlsx") || file.name.endsWith(".xls")) {
-        setExcelFile(file);
-        setImportStep("upload");
-      } else {
-        alert("Mohon masukkan file Excel (.xlsx atau .xls).");
+      const errorMsg = await validateExcelFile(files[0]);
+      if (errorMsg) {
+        alert(errorMsg);
+        return;
       }
+      setExcelFile(files[0]);
+      setImportStep("upload");
     }
   };
 
-  const handleExcelFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleExcelFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
-      const file = files[0];
-      setExcelFile(file);
+      const errorMsg = await validateExcelFile(files[0]);
+      if (errorMsg) {
+        alert(errorMsg);
+        return;
+      }
+      setExcelFile(files[0]);
       setImportStep("upload");
     }
   };

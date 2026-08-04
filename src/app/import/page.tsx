@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase";
 import { Siswa, Kelas, MataPelajaran } from "@/types/database";
 import { parseWideWorkbook, WideWorkbookParseResult } from "@/lib/wide-excel-parser";
 import { resolveSmartImport, ResolvedSmartImportData } from "@/lib/smart-import-resolver";
+import { validateExcelFile } from "@/lib/excel-parser";
 import { 
   FileSpreadsheet, 
   Upload, 
@@ -91,9 +92,10 @@ export default function GlobalImportPage() {
     }
   };
 
-  const handleFileSelect = (file: File) => {
-    if (!file.name.match(/\.(xlsx|xls)$/i)) {
-      alert("Format berkas tidak valid. Harap pilih berkas Excel (.xlsx atau .xls).");
+  const handleFileSelect = async (file: File) => {
+    const errorMsg = await validateExcelFile(file);
+    if (errorMsg) {
+      alert(errorMsg);
       return;
     }
     setSelectedFile(file);
